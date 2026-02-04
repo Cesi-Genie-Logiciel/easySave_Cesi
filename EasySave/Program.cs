@@ -1,5 +1,6 @@
 ﻿using EasySave.Engine;
 using EasySave.Interfaces;
+using EasySave.Localization;
 
 namespace EasySave
 {
@@ -8,6 +9,9 @@ namespace EasySave
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            // Choix de la langue au démarrage
+            SelectLanguage();
 
             IBackupEngine engine = new BackupEngine();
             bool running = true;
@@ -45,249 +49,299 @@ namespace EasySave
                             break;
                         case "7":
                             running = false;
-                            Console.WriteLine("\n👋 Au revoir !");
+                            Console.WriteLine($"\n👋 {Translations.Goodbye}");
                             break;
                         default:
-                            Console.WriteLine("❌ Choix invalide. Veuillez réessayer.");
+                            Console.WriteLine($"❌ {Translations.InvalidChoice}");
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"\n❌ Erreur : {ex.Message}");
+                    Console.WriteLine($"\n❌ {Translations.Error} : {ex.Message}");
                 }
 
                 if (running)
                 {
-                    Console.WriteLine("\nAppuyez sur une touche pour continuer...");
+                    Console.WriteLine($"\n{Translations.PressKeyToContinue}");
                     Console.ReadKey();
                 }
             }
+        }
+
+        static void SelectLanguage()
+        {
+            Console.Clear();
+            Console.WriteLine("╔════════════════════════════════════════════════╗");
+            Console.WriteLine("║    SELECT LANGUAGE / CHOISIR LA LANGUE         ║");
+            Console.WriteLine("╠════════════════════════════════════════════════╣");
+            Console.WriteLine("║  1. Français                                   ║");
+            Console.WriteLine("║  2. English                                    ║");
+            Console.WriteLine("╚════════════════════════════════════════════════╝");
+            Console.Write("\nYour choice / Votre choix : ");
+
+            string? choice = Console.ReadLine();
+
+            if (choice == "2")
+            {
+                Translations.SetLanguage("en");
+            }
+            else
+            {
+                Translations.SetLanguage("fr"); // Par défaut
+            }
+
+            Console.Clear();
         }
 
         static void DisplayMenu()
         {
             Console.Clear();
             Console.WriteLine("\n╔════════════════════════════════════════════════╗");
-            Console.WriteLine("║              MENU PRINCIPAL                    ║");
+            Console.WriteLine($"║              {Translations.MenuTitle,-30}║");
             Console.WriteLine("╠════════════════════════════════════════════════╣");
-            Console.WriteLine("║  1. Créer un travail de sauvegarde             ║");
-            Console.WriteLine("║  2. Lister les travaux                         ║");
-            Console.WriteLine("║  3. Exécuter un travail spécifique             ║");
-            Console.WriteLine("║  4. Exécuter tous les travaux                  ║");
-            Console.WriteLine("║  5. Modifier un travail                        ║");
-            Console.WriteLine("║  6. Supprimer un travail                       ║");
-            Console.WriteLine("║  7. Quitter                                    ║");
+            Console.WriteLine($"║  1. {Translations.MenuCreate,-45}║");
+            Console.WriteLine($"║  2. {Translations.MenuList,-45}║");
+            Console.WriteLine($"║  3. {Translations.MenuExecuteOne,-45}║");
+            Console.WriteLine($"║  4. {Translations.MenuExecuteAll,-45}║");
+            Console.WriteLine($"║  5. {Translations.MenuModify,-45}║");
+            Console.WriteLine($"║  6. {Translations.MenuDelete,-45}║");
+            Console.WriteLine($"║  7. {Translations.MenuQuit,-45}║");
             Console.WriteLine("╚════════════════════════════════════════════════╝");
-            Console.Write("\nVotre choix : ");
+            Console.Write($"\n{Translations.YourChoice} : ");
         }
 
         static void CreateJob(IBackupEngine engine)
         {
-            Console.WriteLine("\n--- CRÉER UN NOUVEAU TRAVAIL ---");
+            Console.Clear();
+            Console.WriteLine($"\n--- {Translations.CreateJobTitle} ---\n");
 
-            Console.Write("Nom du travail : ");
+            // Nom du travail
+            Console.Write($"{Translations.JobName} : ");
             string? name = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(name))
             {
-                Console.WriteLine("❌ Le nom ne peut pas être vide.");
+                Console.WriteLine($"❌ {Translations.NameCannotBeEmpty}");
                 return;
             }
 
-            Console.Write("Chemin source : ");
+            // Chemin source
+            Console.Write($"{Translations.SourcePath} : ");
             string? sourcePath = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
             {
-                Console.WriteLine("❌ Le chemin source est invalide ou n'existe pas.");
+                Console.WriteLine($"❌ {Translations.InvalidSourcePath}");
                 return;
             }
 
-            Console.Write("Chemin destination : ");
+            // Chemin destination
+            Console.Write($"{Translations.TargetPath} : ");
             string? targetPath = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(targetPath))
             {
-                Console.WriteLine("❌ Le chemin destination ne peut pas être vide.");
+                Console.WriteLine($"❌ {Translations.InvalidTargetPath}");
                 return;
             }
 
-            Console.WriteLine("\nType de sauvegarde :");
-            Console.WriteLine("  1. Complète (Complete)");
-            Console.WriteLine("  2. Différentielle (Differential)");
-            Console.Write("Votre choix (1 ou 2) : ");
+            // Type de sauvegarde
+            Console.Write($"{Translations.BackupType} (1={Translations.Complete}, 2={Translations.Differential}) : ");
             string? typeChoice = Console.ReadLine();
-
-            string backupType = typeChoice switch
-            {
-                "1" => "Complete",
-                "2" => "Differential",
-                _ => "Complete"
-            };
+            string backupType = typeChoice == "2" ? "Differential" : "Complete";
 
             engine.CreateJob(name, sourcePath, targetPath, backupType);
+            Console.WriteLine($"\n✅ {Translations.JobCreated} : {name}");
         }
 
         static void ListJobs(IBackupEngine engine)
         {
-            Console.WriteLine("\n--- LISTE DES TRAVAUX ---");
+            Console.Clear();
+            Console.WriteLine($"\n--- {Translations.ListJobsTitle} ---\n");
 
             var jobs = engine.GetAllJobs();
-
             if (jobs.Count == 0)
             {
-                Console.WriteLine("⚠️  Aucun travail de sauvegarde configuré.");
+                Console.WriteLine($"⚠️  {Translations.NoJobs}");
                 return;
             }
 
             for (int i = 0; i < jobs.Count; i++)
             {
                 var job = jobs[i];
-                Console.WriteLine($"\n[{i + 1}] {job.Name}");
-                Console.WriteLine($"    Type       : {job.BackupType}");
-                Console.WriteLine($"    Source     : {job.SourcePath}");
-                Console.WriteLine($"    Destination: {job.TargetPath}");
+                string typeLabel = job.BackupType == "Complete" ? Translations.Complete : Translations.Differential;
+
+                Console.WriteLine($"[{i + 1}] {job.Name}");
+                Console.WriteLine($"    {Translations.Type}: {typeLabel}");
+                Console.WriteLine($"    {Translations.Source}: {job.SourcePath}");
+                Console.WriteLine($"    {Translations.Destination}: {job.TargetPath}");
+                Console.WriteLine();
             }
 
-            Console.WriteLine($"\nTotal : {jobs.Count}/5 travaux");
+            Console.WriteLine($"{Translations.Total}: {jobs.Count} {Translations.Jobs}");
         }
 
         static void ExecuteJob(IBackupEngine engine)
         {
-            var jobs = engine.GetAllJobs();
+            Console.Clear();
+            Console.WriteLine($"\n--- {Translations.ExecuteJobTitle} ---\n");
 
+            var jobs = engine.GetAllJobs();
             if (jobs.Count == 0)
             {
-                Console.WriteLine("⚠️  Aucun travail à exécuter.");
+                Console.WriteLine($"⚠️  {Translations.NoJobsToExecute}");
                 return;
             }
 
-            Console.WriteLine("\n--- EXÉCUTER UN TRAVAIL ---");
-            ListJobs(engine);
+            // Afficher la liste
+            for (int i = 0; i < jobs.Count; i++)
+            {
+                Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
+            }
 
-            Console.Write("\nNuméro du travail à exécuter : ");
-            if (int.TryParse(Console.ReadLine(), out int choice) && choice > 0 && choice <= jobs.Count)
+            Console.Write($"\n{Translations.JobNumber} : ");
+            if (!int.TryParse(Console.ReadLine(), out int index) || index < 1 || index > jobs.Count)
             {
-                engine.ExecuteJob(choice - 1);
+                Console.WriteLine($"❌ {Translations.InvalidNumber}");
+                return;
             }
-            else
-            {
-                Console.WriteLine("❌ Numéro invalide.");
-            }
+
+            var jobToExecute = jobs[index - 1];
+            Console.WriteLine($"\n▶️  {Translations.ExecutingJob} : {jobToExecute.Name}\n");
+            Console.WriteLine($"🚀 {Translations.BackupStarted} : {jobToExecute.Name}");
+            Console.WriteLine("============================================================");
+
+            engine.ExecuteJob(index - 1); // L'interface attend un index (0-based)
+
+            Console.WriteLine("============================================================");
+            Console.WriteLine($"✅ {Translations.BackupCompleted} : {jobToExecute.Name}\n");
         }
 
         static void ExecuteAllJobs(IBackupEngine engine)
         {
-            Console.WriteLine("\n--- EXÉCUTER TOUS LES TRAVAUX ---");
+            Console.Clear();
+            Console.WriteLine($"\n--- {Translations.ExecuteAllTitle} ---");
 
             var jobs = engine.GetAllJobs();
             if (jobs.Count == 0)
             {
-                Console.WriteLine("⚠️  Aucun travail à exécuter.");
+                Console.WriteLine($"⚠️  {Translations.NoJobsToExecute}");
                 return;
             }
 
-            Console.Write($"Confirmer l'exécution de {jobs.Count} travaux ? (O/N) : ");
+            Console.Write(string.Format(Translations.ConfirmExecute, jobs.Count) + " : ");
             string? confirm = Console.ReadLine();
 
-            if (confirm?.ToUpper() == "O")
+            if (confirm?.ToLower() != "o" && confirm?.ToLower() != "y")
             {
-                engine.ExecuteAllJobs();
+                Console.WriteLine($"\n⚠️  {Translations.ExecutionCancelled}");
+                return;
             }
-            else
-            {
-                Console.WriteLine("❌ Exécution annulée.");
-            }
+
+            Console.WriteLine($"\n▶️  {Translations.ExecutingJob} {jobs.Count} {Translations.Jobs.ToLower()}...\n");
+
+            engine.ExecuteAllJobs(); // L'interface gère l'exécution de tous les jobs
+
+            Console.WriteLine($"\n✅ {Translations.AllJobsCompleted}");
         }
 
         static void ModifyJob(IBackupEngine engine)
         {
-            var jobs = engine.GetAllJobs();
+            Console.Clear();
+            Console.WriteLine($"\n--- {Translations.ModifyJobTitle} ---\n");
 
+            var jobs = engine.GetAllJobs();
             if (jobs.Count == 0)
             {
-                Console.WriteLine("⚠️  Aucun travail à modifier.");
+                Console.WriteLine($"⚠️  {Translations.NoJobsToModify}");
                 return;
             }
 
-            Console.WriteLine("\n--- MODIFIER UN TRAVAIL ---");
-            ListJobs(engine);
-
-            Console.Write("\nNuméro du travail à modifier : ");
-            if (!int.TryParse(Console.ReadLine(), out int choice) || choice < 1 || choice > jobs.Count)
+            // Afficher la liste
+            for (int i = 0; i < jobs.Count; i++)
             {
-                Console.WriteLine("❌ Numéro invalide.");
+                Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
+            }
+
+            Console.Write($"\n{Translations.JobToModify} : ");
+            if (!int.TryParse(Console.ReadLine(), out int index) || index < 1 || index > jobs.Count)
+            {
+                Console.WriteLine($"❌ {Translations.InvalidNumber}");
                 return;
             }
 
-            int jobIndex = choice - 1;
-            var job = jobs[jobIndex];
+            var jobToModify = jobs[index - 1];
 
-            Console.WriteLine($"\nModification de : {job.Name}");
-            Console.WriteLine("(Appuyez sur Entrée pour conserver la valeur actuelle)\n");
+            Console.WriteLine($"\n{Translations.ModifyingJob} : {jobToModify.Name}");
+            Console.WriteLine($"{Translations.PressEnterToKeep}\n");
 
-            Console.Write($"Nouveau nom [{job.Name}] : ");
-            string? name = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(name)) name = job.Name;
+            // Nouveau nom
+            Console.Write($"{Translations.NewName} [{jobToModify.Name}] : ");
+            string? newName = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(newName))
+                newName = jobToModify.Name;
 
-            Console.Write($"Nouveau chemin source [{job.SourcePath}] : ");
-            string? sourcePath = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(sourcePath)) sourcePath = job.SourcePath;
+            // Nouveau chemin source
+            Console.Write($"{Translations.NewSourcePath} [{jobToModify.SourcePath}] : ");
+            string? newSource = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(newSource))
+                newSource = jobToModify.SourcePath;
 
-            Console.Write($"Nouveau chemin destination [{job.TargetPath}] : ");
-            string? targetPath = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(targetPath)) targetPath = job.TargetPath;
+            // Nouveau chemin destination
+            Console.Write($"{Translations.NewTargetPath} [{jobToModify.TargetPath}] : ");
+            string? newTarget = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(newTarget))
+                newTarget = jobToModify.TargetPath;
 
-            Console.WriteLine($"\nType actuel : {job.BackupType}");
-            Console.WriteLine("Nouveau type :");
-            Console.WriteLine("  1. Complète (Complete)");
-            Console.WriteLine("  2. Différentielle (Differential)");
-            Console.Write("Votre choix (1 ou 2, ou Entrée pour conserver) : ");
+            // Nouveau type
+            string currentTypeLabel = jobToModify.BackupType == "Complete" ? Translations.Complete : Translations.Differential;
+            Console.Write($"{Translations.NewType} (1={Translations.Complete}, 2={Translations.Differential}) [{currentTypeLabel}] : ");
             string? typeChoice = Console.ReadLine();
+            string newType = jobToModify.BackupType;
+            if (typeChoice == "1")
+                newType = "Complete";
+            else if (typeChoice == "2")
+                newType = "Differential";
 
-            string backupType = typeChoice switch
-            {
-                "1" => "Complete",
-                "2" => "Differential",
-                _ => job.BackupType
-            };
-
-            engine.ModifyJob(jobIndex, name, sourcePath, targetPath, backupType);
+            engine.ModifyJob(index - 1, newName, newSource, newTarget, newType);
+            Console.WriteLine($"\n✅ {Translations.JobModified} : {newName}");
         }
 
         static void DeleteJob(IBackupEngine engine)
         {
-            var jobs = engine.GetAllJobs();
+            Console.Clear();
+            Console.WriteLine($"\n--- {Translations.DeleteJobTitle} ---\n");
 
+            var jobs = engine.GetAllJobs();
             if (jobs.Count == 0)
             {
-                Console.WriteLine("⚠️  Aucun travail à supprimer.");
+                Console.WriteLine($"⚠️  {Translations.NoJobsToDelete}");
                 return;
             }
 
-            Console.WriteLine("\n--- SUPPRIMER UN TRAVAIL ---");
-            ListJobs(engine);
-
-            Console.Write("\nNuméro du travail à supprimer : ");
-            if (int.TryParse(Console.ReadLine(), out int choice) && choice > 0 && choice <= jobs.Count)
+            // Afficher la liste
+            for (int i = 0; i < jobs.Count; i++)
             {
-                int jobIndex = choice - 1;
-                string jobName = jobs[jobIndex].Name;
-
-                Console.Write($"Confirmer la suppression de '{jobName}' ? (O/N) : ");
-                string? confirm = Console.ReadLine();
-
-                if (confirm?.ToUpper() == "O")
-                {
-                    engine.DeleteJob(jobIndex);
-                }
-                else
-                {
-                    Console.WriteLine("❌ Suppression annulée.");
-                }
+                Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
             }
-            else
+
+            Console.Write($"\n{Translations.JobToDelete} : ");
+            if (!int.TryParse(Console.ReadLine(), out int index) || index < 1 || index > jobs.Count)
             {
-                Console.WriteLine("❌ Numéro invalide.");
+                Console.WriteLine($"❌ {Translations.InvalidNumber}");
+                return;
             }
+
+            var jobToDelete = jobs[index - 1];
+            Console.Write(string.Format(Translations.ConfirmDelete, jobToDelete.Name) + " : ");
+            string? confirm = Console.ReadLine();
+
+            if (confirm?.ToLower() != "o" && confirm?.ToLower() != "y")
+            {
+                Console.WriteLine($"\n⚠️  {Translations.DeletionCancelled}");
+                return;
+            }
+
+            engine.DeleteJob(index - 1);
+            Console.WriteLine($"\n✅ {Translations.JobDeleted} : {jobToDelete.Name}");
         }
     }
 }

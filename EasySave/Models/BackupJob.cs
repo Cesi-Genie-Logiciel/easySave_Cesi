@@ -67,16 +67,19 @@ namespace EasySave.Models
             Stats.State = "Active";
             Stats.Timestamp = DateTime.Now;
 
+            // Notifier SEULEMENT le démarrage (pas de OnBackupProgress avec données vides)
             NotifyStarted();
 
             try
             {
+                // La strategy va appeler NotifyProgress pour CHAQUE fichier
                 _strategy.Execute(Config, Stats, NotifyProgress);
 
                 Stats.State = "Completed";
                 Stats.FilesRemaining = 0;
                 Stats.SizeRemaining = 0;
 
+                // Notifier SEULEMENT la complétion (pas de OnBackupProgress avec données vides)
                 NotifyCompleted(success: true);
             }
             catch (Exception)
