@@ -7,12 +7,16 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\EasyLog\EasyLog.csproj" />
-  </ItemGroup>
+
+
+	<ItemGroup>
+		<Folder Include="Factories\" />
+	</ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Factories\" />
+    <Reference Include="EasyLog">
+      <HintPath>..\..\easyLog_Cesi\EasyLog\bin\Debug\net8.0\EasyLog.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
