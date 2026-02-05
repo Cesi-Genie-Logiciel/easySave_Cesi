@@ -3,6 +3,18 @@
   "WorkspaceRootPath": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{C3CA801E-4677-7201-D6C9-50918E0B83C0}|EasySave\\EasySave.csproj|c:\\users\\hp\\source\\repos\\cesi-genie-logiciel\\easysave_cesi\\easysave\\engine\\backupengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C3CA801E-4677-7201-D6C9-50918E0B83C0}|EasySave\\EasySave.csproj|solutionrelative:easysave\\engine\\backupengine.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C3CA801E-4677-7201-D6C9-50918E0B83C0}|EasySave\\EasySave.csproj|c:\\users\\hp\\source\\repos\\cesi-genie-logiciel\\easysave_cesi\\easysave\\factories\\backupjobfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C3CA801E-4677-7201-D6C9-50918E0B83C0}|EasySave\\EasySave.csproj|solutionrelative:easysave\\factories\\backupjobfactory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C3CA801E-4677-7201-D6C9-50918E0B83C0}|EasySave\\EasySave.csproj|c:\\users\\hp\\source\\repos\\cesi-genie-logiciel\\easysave_cesi\\easysave\\models\\backupjob.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C3CA801E-4677-7201-D6C9-50918E0B83C0}|EasySave\\EasySave.csproj|solutionrelative:easysave\\models\\backupjob.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{C3CA801E-4677-7201-D6C9-50918E0B83C0}|EasySave\\EasySave.csproj|c:\\users\\hp\\source\\repos\\cesi-genie-logiciel\\easysave_cesi\\easysave\\easysave.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{C3CA801E-4677-7201-D6C9-50918E0B83C0}|EasySave\\EasySave.csproj|solutionrelative:easysave\\easysave.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     }
@@ -14,21 +26,60 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 2,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "BackupJobFactory.cs",
+              "DocumentMoniker": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\Factories\\BackupJobFactory.cs",
+              "RelativeDocumentMoniker": "EasySave\\Factories\\BackupJobFactory.cs",
+              "ToolTip": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\Factories\\BackupJobFactory.cs",
+              "RelativeToolTip": "EasySave\\Factories\\BackupJobFactory.cs",
+              "ViewState": "AgIAABQAAAAAAAAAAAAAwCQAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-04T17:30:54.903Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "BackupJob.cs",
+              "DocumentMoniker": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\Models\\BackupJob.cs",
+              "RelativeDocumentMoniker": "EasySave\\Models\\BackupJob.cs",
+              "ToolTip": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\Models\\BackupJob.cs",
+              "RelativeToolTip": "EasySave\\Models\\BackupJob.cs",
+              "ViewState": "AgIAAE0AAAAAAAAAAAAAwF0AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-04T17:24:53.722Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "BackupEngine.cs",
+              "DocumentMoniker": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\Engine\\BackupEngine.cs",
+              "RelativeDocumentMoniker": "EasySave\\Engine\\BackupEngine.cs",
+              "ToolTip": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\Engine\\BackupEngine.cs",
+              "RelativeToolTip": "EasySave\\Engine\\BackupEngine.cs",
+              "ViewState": "AgIAAMYAAAAAAAAAAAAAwM8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-02-04T17:24:23.591Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "EasySave",
+              "DocumentIndex": 3,
+              "Title": "EasySave.csproj",
               "DocumentMoniker": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\EasySave.csproj",
               "RelativeDocumentMoniker": "EasySave\\EasySave.csproj",
               "ToolTip": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\EasySave.csproj",
               "RelativeToolTip": "EasySave\\EasySave.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAANAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAwwBAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2026-02-04T15:56:20.634Z",
               "EditorCaption": ""
