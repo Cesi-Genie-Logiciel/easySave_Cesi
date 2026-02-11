@@ -1,12 +1,11 @@
-﻿using EasySave.Interfaces;
+using EasySave.Interfaces;
 using EasySave.Models;
 using ProSoft.EasyLog;
 
 namespace EasySave.Observers
 {
     /// <summary>
-    /// Observer that writes backup events to log files using EasyLog.dll
-    /// Only logs actual file transfers (OnBackupProgress), not start/end events
+    /// Observer that writes detailed file transfer logs using the EasyLog library.
     /// </summary>
     public class LoggerObserver : IBackupObserver
     {
@@ -19,31 +18,27 @@ namespace EasySave.Observers
 
         public void OnBackupStarted(string backupName)
         {
-            // Ne RIEN logger au démarrage
+            // No-op: logging is done per file transfer.
         }
 
         public void OnBackupProgress(BackupEventArgs eventArgs)
         {
-            // Vérification : Ne logger QUE si les données sont complètes
-            if (string.IsNullOrWhiteSpace(eventArgs.SourceFile) ||
-                string.IsNullOrWhiteSpace(eventArgs.BackupName))
-            {
+            // Only log transfers where we actually copied something (size > 0)
+            if (eventArgs.FileSize <= 0)
                 return;
-            }
 
-            // Logger UNIQUEMENT les vrais transferts de fichiers
             _logger.WriteLog(
-                backupName: eventArgs.BackupName,
-                sourceFilePath: eventArgs.SourceFile,
-                targetFilePath: eventArgs.DestFile,
-                fileSize: eventArgs.FileSize,
-                transferTime: eventArgs.TransferTime
+                eventArgs.BackupName,
+                eventArgs.SourceFile,
+                eventArgs.DestFile,
+                eventArgs.FileSize,
+                (long)eventArgs.TransferTimeMs
             );
         }
 
         public void OnBackupCompleted(string backupName, bool success)
         {
-            // Ne RIEN logger à la fin
+            // No specific end-of-backup log entry required here.
         }
     }
 }

@@ -1,95 +1,69 @@
-﻿using EasySave.Interfaces;
+using EasySave.Interfaces;
 using EasySave.Models;
-using System.Diagnostics;
 
 namespace EasySave.Strategies
 {
     /// <summary>
-    /// Differential backup: copies only files that are new or modified
+    /// Differential backup: copies only new or modified files.
     /// </summary>
     public class DifferentialBackupStrategy : IBackupStrategy
     {
         public void Execute(BackupConfig config, BackupStats stats, Action<BackupEventArgs> notifyProgress)
         {
-            if (!Directory.Exists(config.SourcePath))
-                throw new DirectoryNotFoundException($"Source directory not found: {config.SourcePath}");
-
-            Directory.CreateDirectory(config.TargetPath);
-
-            var files = Directory.GetFiles(config.SourcePath, "*.*", SearchOption.AllDirectories);
-
-            // Filter: only new or modified files
-            var filesToCopy = new List<string>();
-
-            foreach (var sourceFile in files)
+            if (!Directory.Exists(config.TargetPath))
             {
-                string relativePath = Path.GetRelativePath(config.SourcePath, sourceFile);
-                string targetFile = Path.Combine(config.TargetPath, relativePath);
-
-                // Copy if target doesn't exist OR source is newer
-                if (!File.Exists(targetFile) ||
-                    File.GetLastWriteTime(sourceFile) > File.GetLastWriteTime(targetFile))
-                {
-                    filesToCopy.Add(sourceFile);
-                }
+                Directory.CreateDirectory(config.TargetPath);
             }
 
-            stats.TotalFiles = filesToCopy.Count;
-            stats.FilesRemaining = filesToCopy.Count;
-            stats.TotalSize = filesToCopy.Sum(f => new FileInfo(f).Length);
-            stats.SizeRemaining = stats.TotalSize;
+            var files = Directory.GetFiles(config.SourcePath, "*.*", SearchOption.AllDirectories);
+            int totalFiles = files.Length;
+            stats.TotalFiles = totalFiles;
 
-            int processedFiles = 0;
+            int processed = 0;
 
-            foreach (var sourceFile in filesToCopy)
+            foreach (var file in files)
             {
-                var startTime = Stopwatch.StartNew();
+                string relativePath = Path.GetRelativePath(config.SourcePath, file);
+                string destFile = Path.Combine(config.TargetPath, relativePath);
 
-                try
+                string? destDir = Path.GetDirectoryName(destFile);
+                if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                 {
-                    string relativePath = Path.GetRelativePath(config.SourcePath, sourceFile);
-                    string targetFile = Path.Combine(config.TargetPath, relativePath);
-
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
-                    File.Copy(sourceFile, targetFile, overwrite: true);
-
-                    startTime.Stop();
-                    var fileInfo = new FileInfo(sourceFile);
-
-                    processedFiles++;
-                    stats.FilesRemaining = stats.TotalFiles - processedFiles;
-                    stats.SizeRemaining -= fileInfo.Length;
-                    stats.CurrentSourceFile = sourceFile;
-                    stats.CurrentDestFile = targetFile;
-
-                    notifyProgress(new BackupEventArgs
-                    {
-                        BackupName = config.Name,
-                        SourceFile = sourceFile,
-                        DestFile = targetFile,
-                        FileSize = fileInfo.Length,
-                        TransferTime = startTime.ElapsedMilliseconds,
-                        TotalFiles = stats.TotalFiles,
-                        ProcessedFiles = processedFiles,
-                        Stats = stats
-                    });
+                    Directory.CreateDirectory(destDir);
                 }
-                catch (Exception ex)
+
+                bool shouldCopy = !File.Exists(destFile) ||
+                                  File.GetLastWriteTime(file) > File.GetLastWriteTime(destFile);
+
+                long fileSize = 0;
+                double transferMs = 0;
+
+                if (shouldCopy)
                 {
-                    notifyProgress(new BackupEventArgs
-                    {
-                        BackupName = config.Name,
-                        SourceFile = sourceFile,
-                        DestFile = "",
-                        FileSize = 0,
-                        TransferTime = -1,
-                        TotalFiles = stats.TotalFiles,
-                        ProcessedFiles = processedFiles,
-                        Stats = stats
-                    });
+                    var info = new FileInfo(file);
+                    fileSize = info.Length;
 
-                    Console.WriteLine($"Error copying {sourceFile}: {ex.Message}");
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    File.Copy(file, destFile, overwrite: true);
+                    sw.Stop();
+                    transferMs = sw.Elapsed.TotalMilliseconds;
                 }
+
+                processed++;
+
+                var args = new BackupEventArgs
+                {
+                    BackupName = config.Name,
+                    SourceFile = file,
+                    DestFile = destFile,
+                    FileSize = fileSize,
+                    TransferTimeMs = transferMs,
+                    TotalFiles = totalFiles,
+                    ProcessedFiles = processed,
+                    Progress = (int)(processed * 100.0 / totalFiles)
+                };
+
+                notifyProgress(args);
             }
         }
     }

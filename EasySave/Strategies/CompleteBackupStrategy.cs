@@ -1,88 +1,56 @@
-﻿using EasySave.Interfaces;
+using EasySave.Interfaces;
 using EasySave.Models;
-using System.Diagnostics;
 
 namespace EasySave.Strategies
 {
     /// <summary>
-    /// Complete backup: copies all files from source to destination
+    /// Complete backup: copies all files from source to target.
     /// </summary>
     public class CompleteBackupStrategy : IBackupStrategy
     {
         public void Execute(BackupConfig config, BackupStats stats, Action<BackupEventArgs> notifyProgress)
         {
-            if (!Directory.Exists(config.SourcePath))
-                throw new DirectoryNotFoundException($"Source directory not found: {config.SourcePath}");
-
-            // Create destination if not exists
-            Directory.CreateDirectory(config.TargetPath);
-
-            // Get all files
-            var files = Directory.GetFiles(config.SourcePath, "*.*", SearchOption.AllDirectories);
-
-            stats.TotalFiles = files.Length;
-            stats.FilesRemaining = files.Length;
-            stats.TotalSize = files.Sum(f => new FileInfo(f).Length);
-            stats.SizeRemaining = stats.TotalSize;
-
-            int processedFiles = 0;
-
-            foreach (var sourceFile in files)
+            if (!Directory.Exists(config.TargetPath))
             {
-                var startTime = Stopwatch.StartNew();
+                Directory.CreateDirectory(config.TargetPath);
+            }
 
-                try
+            var files = Directory.GetFiles(config.SourcePath, "*.*", SearchOption.AllDirectories);
+            int totalFiles = files.Length;
+            stats.TotalFiles = totalFiles;
+
+            for (int i = 0; i < totalFiles; i++)
+            {
+                string file = files[i];
+                string relativePath = Path.GetRelativePath(config.SourcePath, file);
+                string destFile = Path.Combine(config.TargetPath, relativePath);
+
+                string? destDir = Path.GetDirectoryName(destFile);
+                if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                 {
-                    // Calculate relative path
-                    string relativePath = Path.GetRelativePath(config.SourcePath, sourceFile);
-                    string targetFile = Path.Combine(config.TargetPath, relativePath);
-
-                    // Create target directory
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
-
-                    // Copy file
-                    File.Copy(sourceFile, targetFile, overwrite: true);
-
-                    startTime.Stop();
-                    var fileInfo = new FileInfo(sourceFile);
-
-                    // Update stats
-                    processedFiles++;
-                    stats.FilesRemaining = stats.TotalFiles - processedFiles;
-                    stats.SizeRemaining -= fileInfo.Length;
-                    stats.CurrentSourceFile = sourceFile;
-                    stats.CurrentDestFile = targetFile;
-
-                    // Notify observers
-                    notifyProgress(new BackupEventArgs
-                    {
-                        BackupName = config.Name,
-                        SourceFile = sourceFile,
-                        DestFile = targetFile,
-                        FileSize = fileInfo.Length,
-                        TransferTime = startTime.ElapsedMilliseconds,
-                        TotalFiles = stats.TotalFiles,
-                        ProcessedFiles = processedFiles,
-                        Stats = stats
-                    });
+                    Directory.CreateDirectory(destDir);
                 }
-                catch (Exception ex)
+
+                var fileInfo = new FileInfo(file);
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+                File.Copy(file, destFile, overwrite: true);
+
+                stopwatch.Stop();
+
+                var args = new BackupEventArgs
                 {
-                    // Notify error
-                    notifyProgress(new BackupEventArgs
-                    {
-                        BackupName = config.Name,
-                        SourceFile = sourceFile,
-                        DestFile = "",
-                        FileSize = 0,
-                        TransferTime = -1,
-                        TotalFiles = stats.TotalFiles,
-                        ProcessedFiles = processedFiles,
-                        Stats = stats
-                    });
+                    BackupName = config.Name,
+                    SourceFile = file,
+                    DestFile = destFile,
+                    FileSize = fileInfo.Length,
+                    TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                    TotalFiles = totalFiles,
+                    ProcessedFiles = i + 1,
+                    Progress = (int)((i + 1) * 100.0 / totalFiles)
+                };
 
-                    Console.WriteLine($"Error copying {sourceFile}: {ex.Message}");
-                }
+                notifyProgress(args);
             }
         }
     }

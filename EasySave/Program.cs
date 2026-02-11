@@ -1,4 +1,4 @@
-﻿using EasySave.Engine;
+using EasySave.Engine;
 using EasySave.Interfaces;
 using EasySave.Localization;
 
@@ -71,7 +71,15 @@ namespace EasySave
 
         static void SelectLanguage()
         {
-            Console.Clear();
+            // Some environments (like non-interactive consoles) don't support Clear().
+            try
+            {
+                Console.Clear();
+            }
+            catch (IOException)
+            {
+                // Ignore and continue; purely cosmetic.
+            }
             Console.WriteLine("╔════════════════════════════════════════════════╗");
             Console.WriteLine("║    SELECT LANGUAGE / CHOISIR LA LANGUE         ║");
             Console.WriteLine("╠════════════════════════════════════════════════╣");
@@ -91,7 +99,14 @@ namespace EasySave
                 Translations.SetLanguage("fr"); // Par défaut
             }
 
-            Console.Clear();
+            try
+            {
+                Console.Clear();
+            }
+            catch (IOException)
+            {
+                // Ignore in restricted console environments.
+            }
         }
 
         static void DisplayMenu()

@@ -1,7 +1,6 @@
-﻿using EasySave.Interfaces;
+using EasySave.Interfaces;
 using EasySave.Models;
 using EasySave.Strategies;
-using EasySave.Observers;
 
 namespace EasySave.Factories
 {

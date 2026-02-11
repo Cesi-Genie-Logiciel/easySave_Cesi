@@ -1,115 +1,81 @@
-﻿using EasySave.Interfaces;
-using EasySave.Models;
 using System.Text.Json;
+using EasySave.Interfaces;
+using EasySave.Models;
 
 namespace EasySave.Observers
 {
     /// <summary>
-    /// Observer that writes real-time backup state to state.json
+    /// Observer that writes backup state snapshots to JSON files.
     /// </summary>
     public class StateObserver : IBackupObserver
     {
-        private readonly string _stateFilePath;
-        private readonly object _lockObject = new();
+        private readonly string _stateDirectory;
 
         public StateObserver(string stateDirectory)
         {
-            Directory.CreateDirectory(stateDirectory);
-            _stateFilePath = Path.Combine(stateDirectory, "state.json");
+            _stateDirectory = stateDirectory;
+            Directory.CreateDirectory(_stateDirectory);
         }
 
         public void OnBackupStarted(string backupName)
         {
-            // State will be updated on progress
+            var state = new BackupState
+            {
+                Name = backupName,
+                Timestamp = DateTime.Now,
+                State = "Active",
+                Progress = 0
+            };
+
+            WriteState(state);
         }
 
         public void OnBackupProgress(BackupEventArgs eventArgs)
         {
-            lock (_lockObject)
+            var state = new BackupState
             {
-                // Read existing states
-                List<BackupStats> states = ReadStates();
+                Name = eventArgs.BackupName,
+                Timestamp = DateTime.Now,
+                State = "Active",
+                TotalFiles = eventArgs.TotalFiles,
+                FilesRemaining = eventArgs.TotalFiles - eventArgs.ProcessedFiles,
+                CurrentSourceFile = eventArgs.SourceFile,
+                CurrentDestFile = eventArgs.DestFile,
+                Progress = eventArgs.Progress
+            };
 
-                // Update or add current backup state
-                var existingState = states.FirstOrDefault(s => s.Name == eventArgs.BackupName);
-                if (existingState != null)
-                {
-                    // Update existing
-                    existingState.Timestamp = DateTime.Now;
-                    existingState.State = eventArgs.Stats.State;
-                    existingState.TotalFiles = eventArgs.Stats.TotalFiles;
-                    existingState.FilesRemaining = eventArgs.Stats.FilesRemaining;
-                    existingState.TotalSize = eventArgs.Stats.TotalSize;
-                    existingState.SizeRemaining = eventArgs.Stats.SizeRemaining;
-                    existingState.CurrentSourceFile = eventArgs.SourceFile;
-                    existingState.CurrentDestFile = eventArgs.DestFile;
-                }
-                else
-                {
-                    // Add new
-                    states.Add(new BackupStats
-                    {
-                        Name = eventArgs.BackupName,
-                        Timestamp = DateTime.Now,
-                        State = eventArgs.Stats.State,
-                        TotalFiles = eventArgs.Stats.TotalFiles,
-                        FilesRemaining = eventArgs.Stats.FilesRemaining,
-                        TotalSize = eventArgs.Stats.TotalSize,
-                        SizeRemaining = eventArgs.Stats.SizeRemaining,
-                        CurrentSourceFile = eventArgs.SourceFile,
-                        CurrentDestFile = eventArgs.DestFile
-                    });
-                }
-
-                // Write back
-                WriteStates(states);
-            }
+            WriteState(state);
         }
 
         public void OnBackupCompleted(string backupName, bool success)
         {
-            lock (_lockObject)
+            var state = new BackupState
             {
-                var states = ReadStates();
-                var state = states.FirstOrDefault(s => s.Name == backupName);
+                Name = backupName,
+                Timestamp = DateTime.Now,
+                State = success ? "Completed" : "Inactive",
+                Progress = 100
+            };
 
-                if (state != null)
-                {
-                    state.State = success ? "Completed" : "Error";
-                    state.FilesRemaining = 0;
-                    state.SizeRemaining = 0;
-                    state.Timestamp = DateTime.Now;
-                    WriteStates(states);
-                }
-            }
+            WriteState(state);
         }
 
-        private List<BackupStats> ReadStates()
+        private void WriteState(BackupState state)
         {
-            if (!File.Exists(_stateFilePath))
-                return new List<BackupStats>();
-
-            try
+            string fileName = $"{state.Name}_state.json";
+            foreach (var c in Path.GetInvalidFileNameChars())
             {
-                string json = File.ReadAllText(_stateFilePath);
-                return JsonSerializer.Deserialize<List<BackupStats>>(json)
-                    ?? new List<BackupStats>();
+                fileName = fileName.Replace(c, '_');
             }
-            catch
-            {
-                return new List<BackupStats>();
-            }
-        }
 
-        private void WriteStates(List<BackupStats> states)
-        {
+            string path = Path.Combine(_stateDirectory, fileName);
+
             var options = new JsonSerializerOptions
             {
                 WriteIndented = true
             };
 
-            string json = JsonSerializer.Serialize(states, options);
-            File.WriteAllText(_stateFilePath, json);
+            File.WriteAllText(path, JsonSerializer.Serialize(state, options));
         }
     }
 }

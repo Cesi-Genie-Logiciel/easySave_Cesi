@@ -1,23 +1,27 @@
-﻿using EasySave.Interfaces;
+
+using EasySave.Interfaces;
 
 namespace EasySave.Models
 {
     /// <summary>
-    /// Represents a backup job with observers
+    /// Concrete implementation of a backup job.
+    /// Holds configuration, statistics and orchestrates strategy + observers.
     /// </summary>
     public class BackupJob : IBackupJob
     {
-        public BackupConfig Config { get; private set; }
-        public BackupStats Stats { get; private set; }
+        private IBackupStrategy _strategy;
+        private readonly List<IBackupObserver> _observers = new();
 
-        private IBackupStrategy? _strategy;
-        private readonly List<IBackupObserver> _observers;
+        public BackupConfig Config { get; }
+        public BackupStats Stats { get; }
 
         public BackupJob(BackupConfig config)
         {
             Config = config;
-            Stats = new BackupStats { Name = config.Name };
-            _observers = new List<IBackupObserver>();
+            Stats = new BackupStats
+            {
+                Name = config.Name
+            };
         }
 
         public void SetStrategy(IBackupStrategy strategy)
@@ -35,11 +39,31 @@ namespace EasySave.Models
             _observers.Remove(observer);
         }
 
-        private void NotifyProgress(BackupEventArgs eventArgs)
+        public void Execute()
         {
-            foreach (var observer in _observers)
+            if (_strategy == null)
+                throw new InvalidOperationException("No backup strategy configured for this job.");
+
+            bool success = true;
+
+            NotifyStarted();
+
+            try
             {
-                observer.OnBackupProgress(eventArgs);
+                _strategy.Execute(
+                    Config,
+                    Stats,
+                    NotifyProgress
+                );
+            }
+            catch
+            {
+                success = false;
+                throw;
+            }
+            finally
+            {
+                NotifyCompleted(success);
             }
         }
 
@@ -51,42 +75,31 @@ namespace EasySave.Models
             }
         }
 
-        private void NotifyCompleted(bool success)
+        private void NotifyProgress(BackupEventArgs e)
         {
+            // Update stats from event
+            Stats.TotalFiles = e.TotalFiles;
+            Stats.FilesRemaining = e.TotalFiles - e.ProcessedFiles;
+            Stats.TotalSize += e.FileSize;
+            Stats.SizeRemaining = Stats.TotalSize - (long)(e.TransferTimeMs >= 0 ? e.FileSize : 0); // simple approximation
+            Stats.CurrentSourceFile = e.SourceFile;
+            Stats.CurrentDestFile = e.DestFile;
+
             foreach (var observer in _observers)
             {
-                observer.OnBackupCompleted(Config.Name, success);
+                observer.OnBackupProgress(e);
             }
         }
 
-        public void Execute()
+        private void NotifyCompleted(bool success)
         {
-            if (_strategy == null)
-                throw new InvalidOperationException("Strategy not set");
+            Stats.State = "Completed";
+            Stats.FilesRemaining = 0;
+            Stats.SizeRemaining = 0;
 
-            Stats.State = "Active";
-            Stats.Timestamp = DateTime.Now;
-
-            // Notifier SEULEMENT le démarrage (pas de OnBackupProgress avec données vides)
-            NotifyStarted();
-
-            try
+            foreach (var observer in _observers)
             {
-                // La strategy va appeler NotifyProgress pour CHAQUE fichier
-                _strategy.Execute(Config, Stats, NotifyProgress);
-
-                Stats.State = "Completed";
-                Stats.FilesRemaining = 0;
-                Stats.SizeRemaining = 0;
-
-                // Notifier SEULEMENT la complétion (pas de OnBackupProgress avec données vides)
-                NotifyCompleted(success: true);
-            }
-            catch (Exception)
-            {
-                Stats.State = "Error";
-                NotifyCompleted(success: false);
-                throw;
+                observer.OnBackupCompleted(Config.Name, success);
             }
         }
     }
