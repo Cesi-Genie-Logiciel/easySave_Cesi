@@ -1,23 +1,25 @@
-﻿namespace EasySave.Models
+namespace EasySave.Models
 {
     /// <summary>
-    /// Configuration for a backup job
+    /// Configuration for a backup job (paths + type).
     /// </summary>
     public class BackupConfig
     {
-        public string Name { get; set; } = string.Empty;
-        public string SourcePath { get; set; } = string.Empty;
-        public string TargetPath { get; set; } = string.Empty;
-        public string BackupType { get; set; } = "Complete"; // "Complete" or "Differential"
+        public string Name { get; set; }
+        public string SourcePath { get; set; }
+        public string TargetPath { get; set; }
 
-        public BackupConfig() { }
+        /// <summary>
+        /// Backup type: "Complete" or "Differential".
+        /// </summary>
+        public string BackupType { get; set; }
 
-        public BackupConfig(string name, string sourcePath, string targetPath, string backupType)
+        public BackupConfig(string name, string source, string target, string type)
         {
             Name = name;
-            SourcePath = sourcePath;
-            TargetPath = targetPath;
-            BackupType = backupType;
+            SourcePath = source;
+            TargetPath = target;
+            BackupType = type;
         }
     }
 }

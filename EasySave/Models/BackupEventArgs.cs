@@ -1,17 +1,21 @@
-﻿namespace EasySave.Models
+namespace EasySave.Models
 {
     /// <summary>
-    /// Event arguments for backup progress
+    /// Event data used to notify observers about backup progress.
     /// </summary>
-    public class BackupEventArgs : EventArgs
+    public class BackupEventArgs
     {
         public string BackupName { get; set; } = string.Empty;
         public string SourceFile { get; set; } = string.Empty;
         public string DestFile { get; set; } = string.Empty;
         public long FileSize { get; set; }
-        public long TransferTime { get; set; }
+        public double TransferTimeMs { get; set; }
         public int TotalFiles { get; set; }
         public int ProcessedFiles { get; set; }
-        public BackupStats Stats { get; set; } = new();  // ← AJOUTÉ
+
+        /// <summary>
+        /// Percentage of completion (0-100).
+        /// </summary>
+        public int Progress { get; set; }
     }
 }
