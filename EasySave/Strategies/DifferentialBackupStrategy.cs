@@ -1,69 +1,69 @@
+using System;
+using System.IO;
+using System.Diagnostics;
 using EasySave.Interfaces;
 using EasySave.Models;
 
 namespace EasySave.Strategies
 {
-    /// <summary>
-    /// Differential backup: copies only new or modified files.
-    /// </summary>
     public class DifferentialBackupStrategy : IBackupStrategy
     {
-        public void Execute(BackupConfig config, BackupStats stats, Action<BackupEventArgs> notifyProgress)
+        public void ExecuteBackup(string sourcePath, string targetPath, Action<BackupEventArgs> onFileTransferred, string backupName)
         {
-            if (!Directory.Exists(config.TargetPath))
+            Console.WriteLine("  Strategy: Differential Backup (copy only modified files)");
+            
+            if (!Directory.Exists(targetPath))
             {
-                Directory.CreateDirectory(config.TargetPath);
+                Directory.CreateDirectory(targetPath);
             }
-
-            var files = Directory.GetFiles(config.SourcePath, "*.*", SearchOption.AllDirectories);
+            
+            var files = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
             int totalFiles = files.Length;
-            stats.TotalFiles = totalFiles;
-
-            int processed = 0;
-
+            int processedFiles = 0;
+            
             foreach (var file in files)
             {
-                string relativePath = Path.GetRelativePath(config.SourcePath, file);
-                string destFile = Path.Combine(config.TargetPath, relativePath);
-
+                string relativePath = Path.GetRelativePath(sourcePath, file);
+                string destFile = Path.Combine(targetPath, relativePath);
+                
                 string? destDir = Path.GetDirectoryName(destFile);
                 if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                 {
                     Directory.CreateDirectory(destDir);
                 }
-
-                bool shouldCopy = !File.Exists(destFile) ||
-                                  File.GetLastWriteTime(file) > File.GetLastWriteTime(destFile);
-
-                long fileSize = 0;
-                double transferMs = 0;
-
-                if (shouldCopy)
+                
+                bool needsCopy = !File.Exists(destFile) || 
+                                 File.GetLastWriteTime(file) > File.GetLastWriteTime(destFile);
+                
+                if (needsCopy)
                 {
-                    var info = new FileInfo(file);
-                    fileSize = info.Length;
-
-                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    var fileInfo = new FileInfo(file);
+                    var stopwatch = Stopwatch.StartNew();
+                    
                     File.Copy(file, destFile, overwrite: true);
-                    sw.Stop();
-                    transferMs = sw.Elapsed.TotalMilliseconds;
+                    
+                    stopwatch.Stop();
+                    processedFiles++;
+                    
+                    Console.WriteLine($"    Copied (modified): {relativePath}");
+                    
+                    // Notify observers
+                    onFileTransferred(new BackupEventArgs
+                    {
+                        BackupName = backupName,
+                        SourceFile = file,
+                        DestFile = destFile,
+                        FileSize = fileInfo.Length,
+                        TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                        TotalFiles = totalFiles,
+                        ProcessedFiles = processedFiles,
+                        Progress = (int)((processedFiles * 100.0) / totalFiles)
+                    });
                 }
-
-                processed++;
-
-                var args = new BackupEventArgs
+                else
                 {
-                    BackupName = config.Name,
-                    SourceFile = file,
-                    DestFile = destFile,
-                    FileSize = fileSize,
-                    TransferTimeMs = transferMs,
-                    TotalFiles = totalFiles,
-                    ProcessedFiles = processed,
-                    Progress = (int)(processed * 100.0 / totalFiles)
-                };
-
-                notifyProgress(args);
+                    Console.WriteLine($"    Skipped (unchanged): {relativePath}");
+                }
             }
         }
     }

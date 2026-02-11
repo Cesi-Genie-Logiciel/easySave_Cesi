@@ -1,56 +1,59 @@
+using System;
+using System.IO;
+using System.Diagnostics;
 using EasySave.Interfaces;
 using EasySave.Models;
 
 namespace EasySave.Strategies
 {
-    /// <summary>
-    /// Complete backup: copies all files from source to target.
-    /// </summary>
     public class CompleteBackupStrategy : IBackupStrategy
     {
-        public void Execute(BackupConfig config, BackupStats stats, Action<BackupEventArgs> notifyProgress)
+        public void ExecuteBackup(string sourcePath, string targetPath, Action<BackupEventArgs> onFileTransferred, string backupName)
         {
-            if (!Directory.Exists(config.TargetPath))
+            Console.WriteLine("  Strategy: Complete Backup (copy all files)");
+            
+            if (!Directory.Exists(targetPath))
             {
-                Directory.CreateDirectory(config.TargetPath);
+                Directory.CreateDirectory(targetPath);
             }
-
-            var files = Directory.GetFiles(config.SourcePath, "*.*", SearchOption.AllDirectories);
+            
+            var files = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
             int totalFiles = files.Length;
-            stats.TotalFiles = totalFiles;
-
-            for (int i = 0; i < totalFiles; i++)
+            int processedFiles = 0;
+            
+            foreach (var file in files)
             {
-                string file = files[i];
-                string relativePath = Path.GetRelativePath(config.SourcePath, file);
-                string destFile = Path.Combine(config.TargetPath, relativePath);
-
+                string relativePath = Path.GetRelativePath(sourcePath, file);
+                string destFile = Path.Combine(targetPath, relativePath);
+                
                 string? destDir = Path.GetDirectoryName(destFile);
                 if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                 {
                     Directory.CreateDirectory(destDir);
                 }
-
+                
                 var fileInfo = new FileInfo(file);
-                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
+                var stopwatch = Stopwatch.StartNew();
+                
                 File.Copy(file, destFile, overwrite: true);
-
+                
                 stopwatch.Stop();
-
-                var args = new BackupEventArgs
+                processedFiles++;
+                
+                Console.WriteLine($"    Copied: {relativePath}");
+                
+                // Notify observers
+                onFileTransferred(new BackupEventArgs
                 {
-                    BackupName = config.Name,
+                    BackupName = backupName,
                     SourceFile = file,
                     DestFile = destFile,
                     FileSize = fileInfo.Length,
                     TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
                     TotalFiles = totalFiles,
-                    ProcessedFiles = i + 1,
-                    Progress = (int)((i + 1) * 100.0 / totalFiles)
-                };
-
-                notifyProgress(args);
+                    ProcessedFiles = processedFiles,
+                    Progress = (int)((processedFiles * 100.0) / totalFiles)
+                });
             }
         }
     }

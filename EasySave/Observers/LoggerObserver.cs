@@ -4,41 +4,29 @@ using ProSoft.EasyLog;
 
 namespace EasySave.Observers
 {
-    /// <summary>
-    /// Observer that writes detailed file transfer logs using the EasyLog library.
-    /// </summary>
     public class LoggerObserver : IBackupObserver
     {
         private readonly JsonFileLogger _logger;
-
-        public LoggerObserver(string logDirectory)
+        
+        public LoggerObserver(JsonFileLogger logger)
         {
-            _logger = new JsonFileLogger(logDirectory);
+            _logger = logger;
         }
-
+        
         public void OnBackupStarted(string backupName)
         {
-            // No-op: logging is done per file transfer.
+            // Optionnel : logger le début
         }
-
-        public void OnBackupProgress(BackupEventArgs eventArgs)
+        
+        public void OnFileTransferred(BackupEventArgs e)
         {
-            // Only log transfers where we actually copied something (size > 0)
-            if (eventArgs.FileSize <= 0)
-                return;
-
-            _logger.WriteLog(
-                eventArgs.BackupName,
-                eventArgs.SourceFile,
-                eventArgs.DestFile,
-                eventArgs.FileSize,
-                (long)eventArgs.TransferTimeMs
-            );
+            _logger.WriteLog(e.BackupName, e.SourceFile, e.DestFile, 
+                           e.FileSize, (long)e.TransferTimeMs);
         }
-
-        public void OnBackupCompleted(string backupName, bool success)
+        
+        public void OnBackupCompleted(string backupName)
         {
-            // No specific end-of-backup log entry required here.
+            // Optionnel : logger la fin
         }
     }
 }
