@@ -1,6 +1,7 @@
 using System;
-using System.IO;
-using System.Text.Json;
+using System.Collections.Generic;
+using ProSoft.EasyLog.Interfaces;
+using ProSoft.EasyLog;
 using EasySave.Interfaces;
 using EasySave.Models;
 
@@ -8,13 +9,12 @@ namespace EasySave.Observers
 {
     public class StateObserver : IBackupObserver
     {
-        private readonly string _stateDirectory;
-        private readonly Dictionary<string, BackupState> _lastStates = new Dictionary<string, BackupState>();
+        private ILogger _logger;
+        private Dictionary<string, BackupState> _lastStates = new Dictionary<string, BackupState>();
         
-        public StateObserver(string stateDirectory)
+        public StateObserver(ILogger logger)
         {
-            _stateDirectory = stateDirectory;
-            Directory.CreateDirectory(_stateDirectory);
+            _logger = logger;
         }
         
         public void OnBackupStarted(string backupName)
@@ -27,7 +27,7 @@ namespace EasySave.Observers
                 Progress = 0
             };
             _lastStates[backupName] = state;
-            WriteState(state);
+            _logger.UpdateState(state);
         }
         
         public void OnFileTransferred(BackupEventArgs e)
@@ -39,31 +39,40 @@ namespace EasySave.Observers
                 State = "Active",
                 TotalFiles = e.TotalFiles,
                 FilesRemaining = e.TotalFiles - e.ProcessedFiles,
-                TotalSize = e.FileSize * e.TotalFiles, // Approximation
+                TotalSize = e.FileSize * e.TotalFiles,
                 SizeRemaining = e.FileSize * (e.TotalFiles - e.ProcessedFiles),
                 CurrentSourceFile = e.SourceFile,
                 CurrentDestFile = e.DestFile,
                 Progress = e.Progress
             };
             _lastStates[e.BackupName] = state;
-            WriteState(state);
+            _logger.UpdateState(state);
         }
         
         public void OnBackupCompleted(string backupName)
         {
-            // Récupérer le dernier état pour garder les statistiques
             BackupState state;
-            if (_lastStates.ContainsKey(backupName))
+            
+            // Récupérer le dernier état connu pour conserver les données
+            if (_lastStates.TryGetValue(backupName, out var lastState))
             {
-                state = _lastStates[backupName];
-                state.State = "Inactive";
-                state.FilesRemaining = 0;
-                state.SizeRemaining = 0;
-                state.Progress = 100;
-                state.Timestamp = DateTime.Now;
+                state = new BackupState
+                {
+                    Name = backupName,
+                    Timestamp = DateTime.Now,
+                    State = "Inactive",
+                    TotalFiles = lastState.TotalFiles,
+                    FilesRemaining = 0,
+                    TotalSize = lastState.TotalSize,
+                    SizeRemaining = 0,
+                    CurrentSourceFile = lastState.CurrentSourceFile,
+                    CurrentDestFile = lastState.CurrentDestFile,
+                    Progress = 100
+                };
             }
             else
             {
+                // Fallback si pas d'état précédent
                 state = new BackupState
                 {
                     Name = backupName,
@@ -72,31 +81,9 @@ namespace EasySave.Observers
                     Progress = 100
                 };
             }
-            WriteState(state);
-        }
-        
-        private void WriteState(BackupState state)
-        {
-            // Assurer que le dossier existe
-            if (!Directory.Exists(_stateDirectory))
-            {
-                Directory.CreateDirectory(_stateDirectory);
-            }
             
-            string fileName = $"{state.Name}_state.json";
-            foreach (var c in Path.GetInvalidFileNameChars())
-            {
-                fileName = fileName.Replace(c, '_');
-            }
-            
-            string path = Path.Combine(_stateDirectory, fileName);
-            
-            var options = new JsonSerializerOptions
-            {
-                WriteIndented = true
-            };
-            
-            File.WriteAllText(path, JsonSerializer.Serialize(state, options));
+            _lastStates[backupName] = state;
+            _logger.UpdateState(state);
         }
     }
 }

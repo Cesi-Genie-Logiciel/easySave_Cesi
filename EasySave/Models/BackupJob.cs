@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using EasySave.Interfaces;
+using EasySave.Strategies;
 
 namespace EasySave.Models
 {
@@ -31,7 +32,17 @@ namespace EasySave.Models
             
             try
             {
-                _strategy.ExecuteBackup(_sourcePath, _targetPath, NotifyFileTransferred, _name);
+                // Configurer le callback de notification pour la stratégie
+                if (_strategy is Strategies.CompleteBackupStrategy completeStrategy)
+                {
+                    completeStrategy.SetNotificationCallback(NotifyFileTransferred, _name);
+                }
+                else if (_strategy is Strategies.DifferentialBackupStrategy differentialStrategy)
+                {
+                    differentialStrategy.SetNotificationCallback(NotifyFileTransferred, _name);
+                }
+                
+                _strategy.ExecuteBackup(_sourcePath, _targetPath);
             }
             catch (Exception ex)
             {

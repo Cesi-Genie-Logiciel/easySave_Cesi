@@ -1,14 +1,15 @@
+using ProSoft.EasyLog.Interfaces;
+using ProSoft.EasyLog;
 using EasySave.Interfaces;
 using EasySave.Models;
-using ProSoft.EasyLog;
 
 namespace EasySave.Observers
 {
     public class LoggerObserver : IBackupObserver
     {
-        private readonly JsonFileLogger _logger;
+        private ILogger _logger;
         
-        public LoggerObserver(JsonFileLogger logger)
+        public LoggerObserver(ILogger logger)
         {
             _logger = logger;
         }
@@ -20,8 +21,8 @@ namespace EasySave.Observers
         
         public void OnFileTransferred(BackupEventArgs e)
         {
-            _logger.WriteLog(e.BackupName, e.SourceFile, e.DestFile, 
-                           e.FileSize, (long)e.TransferTimeMs);
+            _logger.LogFileTransfer(e.BackupName, e.SourceFile, e.DestFile, 
+                                   e.FileSize, e.TransferTimeMs);
         }
         
         public void OnBackupCompleted(string backupName)

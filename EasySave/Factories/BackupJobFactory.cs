@@ -36,22 +36,11 @@ namespace EasySave.Factories
             // Créer le job
             var job = new BackupJob(name, source, target, strategy);
             
-            // Créer les observateurs
-            string appDataPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "EasySave"
-            );
-            string logPath = Path.Combine(appDataPath, "Logs");
-            string statePath = Path.Combine(appDataPath, "State");
-            
-            Directory.CreateDirectory(logPath);
-            Directory.CreateDirectory(statePath);
-            
-            var logger = new JsonFileLogger(logPath);
-            
+            // Ajouter les observateurs
+            var logger = Logger.Instance;
             job.AddObserver(new ConsoleObserver());
             job.AddObserver(new LoggerObserver(logger));
-            job.AddObserver(new StateObserver(statePath));
+            job.AddObserver(new StateObserver(logger));
             
             return job;
         }
