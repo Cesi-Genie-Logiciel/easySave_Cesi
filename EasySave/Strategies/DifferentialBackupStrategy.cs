@@ -1,16 +1,18 @@
-﻿using EasySave.Interfaces;
-using EasySave.Models;
+using System;
 using System.Diagnostics;
+using System.IO;
+using EasySave.Interfaces;
+using EasySave.Models;
 
 namespace EasySave.Strategies
 {
-    /// <summary>
-    /// Differential backup: copies only files that are new or modified
-    /// </summary>
     public class DifferentialBackupStrategy : IBackupStrategy
     {
         private readonly ICryptoService? _cryptoService;
         private readonly string _encryptionKey;
+
+        private Action<BackupEventArgs>? _onFileTransferred;
+        private string _backupName = string.Empty;
 
         public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null)
         {
@@ -20,96 +22,78 @@ namespace EasySave.Strategies
                 : (Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY") ?? "EasySave");
         }
 
-        public void Execute(BackupConfig config, BackupStats stats, Action<BackupEventArgs> notifyProgress)
+        public void SetNotificationCallback(Action<BackupEventArgs> callback, string backupName)
         {
-            if (!Directory.Exists(config.SourcePath))
-                throw new DirectoryNotFoundException($"Source directory not found: {config.SourcePath}");
+            _onFileTransferred = callback;
+            _backupName = backupName;
+        }
 
-            Directory.CreateDirectory(config.TargetPath);
+        public void ExecuteBackup(string sourcePath, string targetPath)
+        {
+            Console.WriteLine("  Strategy: Differential Backup (copy only modified files)");
 
-            var files = Directory.GetFiles(config.SourcePath, "*.*", SearchOption.AllDirectories);
-
-            // Filter: only new or modified files
-            var filesToCopy = new List<string>();
-
-            foreach (var sourceFile in files)
+            if (!Directory.Exists(targetPath))
             {
-                string relativePath = Path.GetRelativePath(config.SourcePath, sourceFile);
-                string targetFile = Path.Combine(config.TargetPath, relativePath);
-
-                // Copy if target doesn't exist OR source is newer
-                if (!File.Exists(targetFile) ||
-                    File.GetLastWriteTime(sourceFile) > File.GetLastWriteTime(targetFile))
-                {
-                    filesToCopy.Add(sourceFile);
-                }
+                Directory.CreateDirectory(targetPath);
             }
 
-            stats.TotalFiles = filesToCopy.Count;
-            stats.FilesRemaining = filesToCopy.Count;
-            stats.TotalSize = filesToCopy.Sum(f => new FileInfo(f).Length);
-            stats.SizeRemaining = stats.TotalSize;
-
+            var allFiles = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
+            int totalFiles = allFiles.Length;
             int processedFiles = 0;
 
-            foreach (var sourceFile in filesToCopy)
+            foreach (var file in allFiles)
             {
-                var startTime = Stopwatch.StartNew();
+                string relativePath = Path.GetRelativePath(sourcePath, file);
+                string destFile = Path.Combine(targetPath, relativePath);
 
-                try
+                string? destDir = Path.GetDirectoryName(destFile);
+                if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                 {
-                    string relativePath = Path.GetRelativePath(config.SourcePath, sourceFile);
-                    string targetFile = Path.Combine(config.TargetPath, relativePath);
+                    Directory.CreateDirectory(destDir);
+                }
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
-                    File.Copy(sourceFile, targetFile, overwrite: true);
+                if (!File.Exists(destFile) ||
+                    File.GetLastWriteTime(file) > File.GetLastWriteTime(destFile))
+                {
+                    var stopwatch = Stopwatch.StartNew();
+                    File.Copy(file, destFile, overwrite: true);
 
-                    // Optional encryption (branch 1: always attempt when service is available)
+                    // CryptoSoft integration (branch P4): encrypt copied file if service is available
                     if (_cryptoService?.IsAvailable() == true)
                     {
-                        var encCode = _cryptoService.EncryptInPlace(targetFile, _encryptionKey);
+                        var encCode = _cryptoService.EncryptInPlace(destFile, _encryptionKey);
                         if (encCode < 0)
                         {
-                            Console.WriteLine($"[CryptoSoft] Encryption failed for '{targetFile}' (code {encCode}).");
+                            Console.WriteLine($"[CryptoSoft] Encryption failed for '{destFile}' (code {encCode}).");
                         }
                     }
 
-                    startTime.Stop();
-                    var fileInfo = new FileInfo(sourceFile);
+                    stopwatch.Stop();
 
                     processedFiles++;
-                    stats.FilesRemaining = stats.TotalFiles - processedFiles;
-                    stats.SizeRemaining -= fileInfo.Length;
-                    stats.CurrentSourceFile = sourceFile;
-                    stats.CurrentDestFile = targetFile;
+                    Console.WriteLine($"    Copied (modified): {relativePath}");
 
-                    notifyProgress(new BackupEventArgs
+                    // Notifier le transfert de fichier
+                    if (_onFileTransferred != null)
                     {
-                        BackupName = config.Name,
-                        SourceFile = sourceFile,
-                        DestFile = targetFile,
-                        FileSize = fileInfo.Length,
-                        TransferTime = startTime.ElapsedMilliseconds,
-                        TotalFiles = stats.TotalFiles,
-                        ProcessedFiles = processedFiles,
-                        Stats = stats
-                    });
+                        var fileInfo = new FileInfo(file);
+                        var eventArgs = new BackupEventArgs
+                        {
+                            BackupName = _backupName,
+                            SourceFile = file,
+                            DestFile = destFile,
+                            FileSize = fileInfo.Length,
+                            TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                            TotalFiles = totalFiles,
+                            ProcessedFiles = processedFiles,
+                            Progress = (int)((processedFiles * 100.0) / totalFiles)
+                        };
+                        _onFileTransferred(eventArgs);
+                    }
                 }
-                catch (Exception ex)
+                else
                 {
-                    notifyProgress(new BackupEventArgs
-                    {
-                        BackupName = config.Name,
-                        SourceFile = sourceFile,
-                        DestFile = "",
-                        FileSize = 0,
-                        TransferTime = -1,
-                        TotalFiles = stats.TotalFiles,
-                        ProcessedFiles = processedFiles,
-                        Stats = stats
-                    });
-
-                    Console.WriteLine($"Error copying {sourceFile}: {ex.Message}");
+                    Console.WriteLine($"    Skipped (unchanged): {relativePath}");
                 }
             }
         }

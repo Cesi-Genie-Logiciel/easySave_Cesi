@@ -1,18 +1,18 @@
-﻿using EasySave.Interfaces;
-using EasySave.Models;
+using System;
 using System.Diagnostics;
+using System.IO;
+using EasySave.Interfaces;
+using EasySave.Models;
 
 namespace EasySave.Strategies
 {
-    /// <summary>
-    /// Complete backup: copies all files from source to destination
-    /// </summary>
     public class CompleteBackupStrategy : IBackupStrategy
     {
         private readonly ICryptoService? _cryptoService;
-
-        // Temporary: pulled from environment to avoid hardcoding secrets in code.
         private readonly string _encryptionKey;
+
+        private Action<BackupEventArgs>? _onFileTransferred;
+        private string _backupName = string.Empty;
 
         public CompleteBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null)
         {
@@ -22,89 +22,70 @@ namespace EasySave.Strategies
                 : (Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY") ?? "EasySave");
         }
 
-        public void Execute(BackupConfig config, BackupStats stats, Action<BackupEventArgs> notifyProgress)
+        public void SetNotificationCallback(Action<BackupEventArgs> callback, string backupName)
         {
-            if (!Directory.Exists(config.SourcePath))
-                throw new DirectoryNotFoundException($"Source directory not found: {config.SourcePath}");
+            _onFileTransferred = callback;
+            _backupName = backupName;
+        }
 
-            // Create destination if not exists
-            Directory.CreateDirectory(config.TargetPath);
+        public void ExecuteBackup(string sourcePath, string targetPath)
+        {
+            Console.WriteLine("  Strategy: Complete Backup (copy all files)");
 
-            // Get all files
-            var files = Directory.GetFiles(config.SourcePath, "*.*", SearchOption.AllDirectories);
+            if (!Directory.Exists(targetPath))
+            {
+                Directory.CreateDirectory(targetPath);
+            }
 
-            stats.TotalFiles = files.Length;
-            stats.FilesRemaining = files.Length;
-            stats.TotalSize = files.Sum(f => new FileInfo(f).Length);
-            stats.SizeRemaining = stats.TotalSize;
-
+            var allFiles = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
+            int totalFiles = allFiles.Length;
             int processedFiles = 0;
 
-            foreach (var sourceFile in files)
+            foreach (var file in allFiles)
             {
-                var startTime = Stopwatch.StartNew();
+                string relativePath = Path.GetRelativePath(sourcePath, file);
+                string destFile = Path.Combine(targetPath, relativePath);
 
-                try
+                string? destDir = Path.GetDirectoryName(destFile);
+                if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                 {
-                    // Calculate relative path
-                    string relativePath = Path.GetRelativePath(config.SourcePath, sourceFile);
-                    string targetFile = Path.Combine(config.TargetPath, relativePath);
-
-                    // Create target directory
-                    Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
-
-                    // Copy file
-                    File.Copy(sourceFile, targetFile, overwrite: true);
-
-                    // Optional encryption (branch 1: always attempt when service is available)
-                    if (_cryptoService?.IsAvailable() == true)
-                    {
-                        var encCode = _cryptoService.EncryptInPlace(targetFile, _encryptionKey);
-                        if (encCode < 0)
-                        {
-                            Console.WriteLine($"[CryptoSoft] Encryption failed for '{targetFile}' (code {encCode}).");
-                        }
-                    }
-
-                    startTime.Stop();
-                    var fileInfo = new FileInfo(sourceFile);
-
-                    // Update stats
-                    processedFiles++;
-                    stats.FilesRemaining = stats.TotalFiles - processedFiles;
-                    stats.SizeRemaining -= fileInfo.Length;
-                    stats.CurrentSourceFile = sourceFile;
-                    stats.CurrentDestFile = targetFile;
-
-                    // Notify observers
-                    notifyProgress(new BackupEventArgs
-                    {
-                        BackupName = config.Name,
-                        SourceFile = sourceFile,
-                        DestFile = targetFile,
-                        FileSize = fileInfo.Length,
-                        TransferTime = startTime.ElapsedMilliseconds,
-                        TotalFiles = stats.TotalFiles,
-                        ProcessedFiles = processedFiles,
-                        Stats = stats
-                    });
+                    Directory.CreateDirectory(destDir);
                 }
-                catch (Exception ex)
-                {
-                    // Notify error
-                    notifyProgress(new BackupEventArgs
-                    {
-                        BackupName = config.Name,
-                        SourceFile = sourceFile,
-                        DestFile = "",
-                        FileSize = 0,
-                        TransferTime = -1,
-                        TotalFiles = stats.TotalFiles,
-                        ProcessedFiles = processedFiles,
-                        Stats = stats
-                    });
 
-                    Console.WriteLine($"Error copying {sourceFile}: {ex.Message}");
+                var stopwatch = Stopwatch.StartNew();
+                File.Copy(file, destFile, overwrite: true);
+
+                // CryptoSoft integration (branch P4): encrypt copied file if service is available
+                if (_cryptoService?.IsAvailable() == true)
+                {
+                    var encCode = _cryptoService.EncryptInPlace(destFile, _encryptionKey);
+                    if (encCode < 0)
+                    {
+                        Console.WriteLine($"[CryptoSoft] Encryption failed for '{destFile}' (code {encCode}).");
+                    }
+                }
+
+                stopwatch.Stop();
+
+                processedFiles++;
+                Console.WriteLine($"    Copied: {relativePath}");
+
+                // Notifier le transfert de fichier
+                if (_onFileTransferred != null)
+                {
+                    var fileInfo = new FileInfo(file);
+                    var eventArgs = new BackupEventArgs
+                    {
+                        BackupName = _backupName,
+                        SourceFile = file,
+                        DestFile = destFile,
+                        FileSize = fileInfo.Length,
+                        TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                        TotalFiles = totalFiles,
+                        ProcessedFiles = processedFiles,
+                        Progress = (int)((processedFiles * 100.0) / totalFiles)
+                    };
+                    _onFileTransferred(eventArgs);
                 }
             }
         }

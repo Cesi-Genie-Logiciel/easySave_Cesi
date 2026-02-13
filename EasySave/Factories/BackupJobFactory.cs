@@ -1,20 +1,27 @@
-﻿using EasySave.Interfaces;
+using System;
+using System.IO;
 using EasySave.Models;
 using EasySave.Strategies;
 using EasySave.Observers;
+using EasySave.Interfaces;
 using EasySave.Services;
+using ProSoft.EasyLog;
+using ProSoft.EasyLog.Implementation;
 
 namespace EasySave.Factories
 {
-    /// <summary>
-    /// Factory responsible for creating fully configured BackupJob instances
-    /// (strategy + observers) from a BackupConfig.
-    /// </summary>
-    public static class BackupJobFactory
+    public class BackupJobFactory
     {
-        public static BackupJob Create(BackupConfig config, IEnumerable<IBackupObserver> observers)
+        public static BackupJob CreateBackupJob(string name, string source, string target, string type)
         {
-            // CryptoSoft integration (branch 1): try to wire the external tool if present.
+            // Validation (dev)
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentException("Backup name cannot be empty");
+
+            if (!Directory.Exists(source))
+                throw new DirectoryNotFoundException($"Source not found: {source}");
+
+            // CryptoSoft integration (P4): try to wire the external tool if present.
             // If not present, strategies still work normally.
             ICryptoService? cryptoService = null;
             try
@@ -36,22 +43,30 @@ namespace EasySave.Factories
                 // Keep crypto optional.
             }
 
-            // Choose strategy based on BackupType
-            IBackupStrategy strategy = config.BackupType.ToLower() switch
+            // Choisir la stratégie (dev) + injection crypto
+            IBackupStrategy strategy;
+            switch (type.ToLower())
             {
-                "complete" => new CompleteBackupStrategy(cryptoService),
-                "differential" => new DifferentialBackupStrategy(cryptoService),
-                _ => new CompleteBackupStrategy(cryptoService)
-            };
-
-            var job = new BackupJob(config);
-            job.SetStrategy(strategy);
-
-            // Attach all observers to the job
-            foreach (var observer in observers)
-            {
-                job.AddObserver(observer);
+                case "complete":
+                    strategy = new CompleteBackupStrategy(cryptoService);
+                    break;
+                case "differential":
+                    strategy = new DifferentialBackupStrategy(cryptoService);
+                    break;
+                default:
+                    throw new ArgumentException($"Unknown backup type: {type}");
             }
+
+            // Créer le job (dev)
+            var job = new BackupJob(name, source, target, strategy);
+
+            // Ajouter les observateurs (dev)
+            // EasyLog: création via la factory (pas de singleton Logger.Instance dans cette implémentation)
+            var logger = LoggerFactory.CreateLogger(LogFormat.JSON, Path.Combine(target, "logs"));
+
+            job.AddObserver(new ConsoleObserver());
+            job.AddObserver(new LoggerObserver(logger));
+            job.AddObserver(new StateObserver(logger));
 
             return job;
         }

@@ -8,9 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="EasyLog">
-      <HintPath>..\..\easyLog_Cesi\EasyLog\bin\Debug\net8.0\EasyLog.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="..\..\easyLog_Cesi\EasyLog\EasyLog.csproj" />
   </ItemGroup>
 
 </Project>
