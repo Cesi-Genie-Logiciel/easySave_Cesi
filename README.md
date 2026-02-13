@@ -3,7 +3,30 @@
 EasySave est un logiciel de sauvegarde développé dans le cadre du projet fil rouge ProSoft (Programmation Système).
 L'objectif est de concevoir et faire évoluer une solution de sauvegarde au fil de plusieurs versions, avec une attention particulière portée à la qualité, la maintenabilité, la traçabilité (logs/états) et la gestion de versions.
 
+## 🆕 Nouveautés v2.0 (P2 Features)
+
+### ⚙️ Système de configuration centralisé
+- Format de logs configurable (JSON/XML) pour P3
+- Extensions à crypter configurables pour P4
+- Détection du logiciel métier configurable pour P4
+- Fichier `appsettings.json` avec gestion automatique
+
+### 💾 Stockage illimité avec persistance
+- ❌ **Suppression de la limite de 5 jobs**
+- ✅ Stockage illimité de travaux de sauvegarde
+- ✅ Persistance automatique en JSON (`%APPDATA%\EasySave\jobs.json`)
+- ✅ Rechargement automatique au démarrage
+
+### 🎨 API pour GUI/MVVM (P1)
+- Events C# pour binding WPF (FileTransferred, BackupStarted, BackupCompleted)
+- Méthodes CRUD étendues (GetJobByName, UpdateBackupJob, etc.)
+- Support Pause/Stop pour contrôle d'exécution
+- Pattern Observer maintenu pour rétrocompatibilité
+
+**📖 Documentation complète**: Voir [FEATURES_P2.md](FEATURES_P2.md)
+
 ## Table des matières
+- [Nouveautés v2.0](#-nouveautés-v20-p2-features)
 - [Objectifs](#objectifs)
 - [Prérequis](#prérequis)
 - [Installation](#installation)
@@ -120,7 +143,7 @@ Target path: D:\Sauvegardes\MonProjet
 Backup type (Complete/Differential): Complete
 ```
 
-**Limite :** Maximum 5 travaux de sauvegarde simultanés
+**✅ v2.0 :** Stockage illimité de travaux (limite de 5 supprimée)
 
 #### 2. Lister les sauvegardes
 Affiche tous les travaux de sauvegarde créés avec leurs informations :
@@ -153,23 +176,29 @@ easySave_Cesi/
 │   │   └── BackupJobFactory.cs        # Factory pour créer des BackupJob
 │   ├── Interfaces/
 │   │   ├── IBackupObserver.cs         # Pattern Observer
-│   │   ├── IBackupService.cs          # Interface service
-│   │   └── IBackupStrategy.cs         # Pattern Strategy
+│   │   ├── IBackupService.cs          # Interface service (✅ étendu v2.0)
+│   │   ├── IBackupStrategy.cs         # Pattern Strategy
+│   │   ├── IJobStorageService.cs      # ✅ v2.0: Persistance des jobs
+│   │   └── ISettingsService.cs        # ✅ v2.0: Gestion configuration
 │   ├── Models/
+│   │   ├── AppSettings.cs             # ✅ v2.0: Configuration app
 │   │   ├── BackupConfig.cs            # Configuration de sauvegarde
 │   │   ├── BackupEventArgs.cs         # Événements de progression
-│   │   ├── BackupJob.cs               # Travail de sauvegarde
+│   │   ├── BackupJob.cs               # Travail de sauvegarde (✅ events v2.0)
 │   │   └── BackupState.cs             # État d'une sauvegarde
 │   ├── Observers/
 │   │   ├── ConsoleObserver.cs         # Affichage console
 │   │   ├── LoggerObserver.cs          # Logs JSON
 │   │   └── StateObserver.cs           # Fichier d'état
 │   ├── Services/
-│   │   └── BackupService.cs           # Service de gestion des sauvegardes
+│   │   ├── BackupService.cs           # Service de gestion des sauvegardes (✅ illimité v2.0)
+│   │   ├── JobStorageService.cs       # ✅ v2.0: Persistance JSON
+│   │   └── SettingsService.cs         # ✅ v2.0: Chargement config
 │   ├── Strategies/
 │   │   ├── CompleteBackupStrategy.cs  # Sauvegarde complète
 │   │   └── DifferentialBackupStrategy.cs # Sauvegarde différentielle
-│   └── Program.cs                     # Point d'entrée
+│   ├── Program.cs                     # Point d'entrée
+│   └── appsettings.json               # ✅ v2.0: Configuration centralisée
 │
 ├── easyLog_Cesi/                      # Bibliothèque de logging (DLL)
 │   └── EasyLog/
@@ -180,6 +209,7 @@ easySave_Cesi/
 ├── doc/
 │   └── architecture/                  # Diagrammes de classes
 │
+├── FEATURES_P2.md                     # ✅ v2.0: Documentation des features P2
 └── README.md                          # Ce fichier
 ```
 
@@ -223,6 +253,39 @@ Ces ajouts sont nécessaires pour permettre la **communication entre les straté
 Les dérogations sont des **détails d'implémentation** qui ne violent pas l'architecture globale du système. Elles permettent au système d'être **fonctionnel** tout en respectant les principes de conception définis dans le diagramme.
 
 ## Fichiers générés
+
+### Configuration de l'application (v2.0)
+**Emplacement :** `EasySave/appsettings.json` (copié dans le répertoire de sortie)
+
+**Format :**
+```json
+{
+  "LogFormat": 0,
+  "ExtensionsToEncrypt": [".doc", ".docx", ".xls", ".xlsx", ".pdf", ".txt"],
+  "BusinessSoftwareName": ""
+}
+```
+
+**Usage :** Configuration centralisée pour P3 (logs XML/JSON) et P4 (cryptage + logiciel métier)
+
+### Persistance des jobs (v2.0)
+**Emplacement :** `%APPDATA%\EasySave\jobs.json`
+
+**Format :**
+```json
+[
+  {
+    "Name": "Job1",
+    "SourcePath": "C:\\Data\\Source1",
+    "TargetPath": "C:\\Backup\\Target1",
+    "BackupType": "complete"
+  }
+]
+```
+
+**Comportement :**
+- Sauvegarde automatique à chaque création/suppression de job
+- Rechargement automatique au démarrage de l'application
 
 ### Logs des transferts
 **Emplacement :** `%APPDATA%\EasySave\Logs\log_YYYY-MM-DD.json`
