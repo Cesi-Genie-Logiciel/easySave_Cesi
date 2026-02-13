@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using EasySave.Interfaces;
 using EasySave.Services;
@@ -169,8 +169,17 @@ namespace EasySave
             Console.WriteLine($"\n▶️  Executing job: {jobs[index - 1].Name}\n");
             Console.WriteLine("============================================================");
             
+            // Prefer TryExecuteBackupJob when available (business software detection)
+            if (service is EasySave.Services.BackupService concreteService)
+            {
+                var executed = concreteService.TryExecuteBackupJob(index - 1);
+                Console.WriteLine("============================================================");
+                Console.WriteLine(executed ? "✅ Backup completed!\n" : "⚠️  Backup not started (business software running).\n");
+                return;
+            }
+
             service.ExecuteBackupJob(index - 1);
-            
+
             Console.WriteLine("============================================================");
             Console.WriteLine($"✅ Backup completed!\n");
         }
