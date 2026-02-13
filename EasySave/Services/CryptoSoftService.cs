@@ -65,6 +65,58 @@ public sealed class CryptoSoftService : ICryptoService
         }
     }
 
+    /// <summary>
+    /// Encrypts a file and returns:
+    /// - >0 : encryption duration in ms
+    /// - 0  : encryption succeeded but duration not available
+    /// - <0 : error code
+    /// 
+    /// Used by v2 branch feat/log-add-encryption-time.
+    /// </summary>
+    public long EncryptInPlaceWithDurationMs(string filePath, string encryptionKey)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return -10;
+
+        if (!File.Exists(filePath))
+            return -11;
+
+        if (!IsAvailable())
+            return -12;
+
+        try
+        {
+            var startInfo = BuildStartInfo(filePath, encryptionKey);
+
+            var sw = Stopwatch.StartNew();
+            using var process = new Process { StartInfo = startInfo };
+            process.Start();
+
+            if (!process.WaitForExit(30_000))
+            {
+                try { process.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                return -14;
+            }
+
+            sw.Stop();
+
+            // CryptoSoft convention: exit code is elapsed ms on success, negative on error.
+            if (process.ExitCode < 0)
+                return process.ExitCode;
+
+            // ExitCode is an int, cap to long.
+            if (process.ExitCode > 0)
+                return process.ExitCode;
+
+            // Fallback: if exit code is 0, use measured time.
+            return Math.Max(0, sw.ElapsedMilliseconds);
+        }
+        catch
+        {
+            return -13;
+        }
+    }
+
     private ProcessStartInfo BuildStartInfo(string filePath, string encryptionKey)
     {
         // If we got a DLL (common when using `dotnet build` without publish), run it through dotnet.
