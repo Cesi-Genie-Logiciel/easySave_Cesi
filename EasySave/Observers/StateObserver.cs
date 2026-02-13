@@ -1,8 +1,9 @@
-using System;
-using System.Collections.Generic;
-using ProSoft.EasyLog.Interfaces;
 using EasySave.Interfaces;
 using EasySave.Models;
+using ProSoft.EasyLog.Implementation;
+using ProSoft.EasyLog.Interfaces;
+using System;
+using System.Collections.Generic;
 
 namespace EasySave.Observers
 {
@@ -28,7 +29,7 @@ namespace EasySave.Observers
             _lastStates[backupName] = state;
 
             // Utiliser la méthode UpdateState disponible dans ILogger
-            _logger.UpdateState(new List<object>(_lastStates.Values));
+            _logger.UpdateStateToDisk();
         }
 
         public void OnFileTransferred(BackupEventArgs e)
@@ -49,7 +50,7 @@ namespace EasySave.Observers
             _lastStates[e.BackupName] = state;
 
             // Utiliser la méthode UpdateState disponible dans ILogger
-            _logger.UpdateState(new List<object>(_lastStates.Values));
+            _logger.UpdateStateToDisk();
         }
 
         public void OnBackupCompleted(string backupName)
@@ -88,7 +89,7 @@ namespace EasySave.Observers
             _lastStates[backupName] = state;
 
             // Utiliser la méthode UpdateState disponible dans ILogger
-            _logger.UpdateState(new List<object>(_lastStates.Values));
+            _logger.UpdateStateToDisk();
         }
     }
 }

@@ -6,23 +6,34 @@ using EasySave.Observers;
 using EasySave.Interfaces;
 using EasySave.Services;
 using ProSoft.EasyLog;
-// using ProSoft.EasyLog.Implementation; // TODO P3: Sera disponible avec EasyLog 1.1
+using ProSoft.EasyLog.Implementation;
 
 namespace EasySave.Factories
 {
+    /// <summary>
+    /// Factory for creating BackupJob instances with proper configuration.
+    /// Handles strategy selection, crypto service integration, and observer setup.
+    /// </summary>
     public class BackupJobFactory
     {
+        /// <summary>
+        /// Creates a configured BackupJob instance with all dependencies.
+        /// </summary>
+        /// <param name="name">Unique backup job name</param>
+        /// <param name="source">Source directory path</param>
+        /// <param name="target">Target directory path</param>
+        /// <param name="type">Backup type: "complete" or "differential"</param>
+        /// <returns>Fully configured BackupJob ready for execution</returns>
         public static BackupJob CreateBackupJob(string name, string source, string target, string type)
         {
-            // Validation (dev)
+            // Validate input parameters
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Backup name cannot be empty");
-
             if (!Directory.Exists(source))
                 throw new DirectoryNotFoundException($"Source not found: {source}");
 
-            // CryptoSoft integration (P4): try to wire the external tool if present.
-            // If not present, strategies still work normally.
+            // CryptoSoft integration: try to wire the external tool if present
+            // If not present, strategies still work normally without encryption
             ICryptoService? cryptoService = null;
             try
             {
@@ -40,10 +51,10 @@ namespace EasySave.Factories
             }
             catch
             {
-                // Keep crypto optional.
+                // Keep crypto optional - continue without it if unavailable
             }
 
-            // Choisir la stratégie (dev) + injection crypto
+            // Select backup strategy based on type + inject crypto service
             IBackupStrategy strategy;
             switch (type.ToLower())
             {
@@ -57,14 +68,16 @@ namespace EasySave.Factories
                     throw new ArgumentException($"Unknown backup type: {type}");
             }
 
-            // Créer le job (dev)
+            // Create the backup job with selected strategy
             var job = new BackupJob(name, source, target, strategy);
 
-            // Ajouter les observateurs
-            // TODO P3: Dans v2.0, utiliser LoggerFactory.CreateLogger avec AppSettings.LogFormat
-            // Pour l'instant, on utilise le singleton Logger.Instance
-            var logger = Logger.Instance;
+            // Setup logger with JSON formatter for v2.0
+            // Logger uses dependency injection (no singleton pattern)
+            var jsonFormatter = new JsonLogFormatter();
+            var logDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+            var logger = new Logger(jsonFormatter, logDirectory);
 
+            // Attach observers for monitoring and logging
             job.AddObserver(new ConsoleObserver());
             job.AddObserver(new LoggerObserver(logger));
             job.AddObserver(new StateObserver(logger));
