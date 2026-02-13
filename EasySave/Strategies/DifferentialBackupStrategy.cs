@@ -9,6 +9,17 @@ namespace EasySave.Strategies
     /// </summary>
     public class DifferentialBackupStrategy : IBackupStrategy
     {
+        private readonly ICryptoService? _cryptoService;
+        private readonly string _encryptionKey;
+
+        public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null)
+        {
+            _cryptoService = cryptoService;
+            _encryptionKey = !string.IsNullOrWhiteSpace(encryptionKey)
+                ? encryptionKey
+                : (Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY") ?? "EasySave");
+        }
+
         public void Execute(BackupConfig config, BackupStats stats, Action<BackupEventArgs> notifyProgress)
         {
             if (!Directory.Exists(config.SourcePath))
@@ -52,6 +63,16 @@ namespace EasySave.Strategies
 
                     Directory.CreateDirectory(Path.GetDirectoryName(targetFile)!);
                     File.Copy(sourceFile, targetFile, overwrite: true);
+
+                    // Optional encryption (branch 1: always attempt when service is available)
+                    if (_cryptoService?.IsAvailable() == true)
+                    {
+                        var encCode = _cryptoService.EncryptInPlace(targetFile, _encryptionKey);
+                        if (encCode < 0)
+                        {
+                            Console.WriteLine($"[CryptoSoft] Encryption failed for '{targetFile}' (code {encCode}).");
+                        }
+                    }
 
                     startTime.Stop();
                     var fileInfo = new FileInfo(sourceFile);

@@ -41,3 +41,16 @@ Les règles suivantes sont appliquées (ou à appliquer) sur `main` (et idéalem
 
 ## Licence
 Projet académique (CESI). Usage interne à l’équipe et à l’évaluation.
+
+## P4 v2.0 - Intégration CryptoSoft (branche `feat/cryptosoft-integration`)
+
+EasySave peut appeler **CryptoSoft** (outil externe) pour chiffrer les fichiers copiés, juste après la copie.
+
+### Détection automatique
+EasySave essaie de détecter la racine du repository en recherchant le fichier `EasyLog.slnx` dans les dossiers parents de son répertoire d'exécution, puis recherche un binaire CryptoSoft sous `CryptoSoft/bin/...` (y compris les dossiers RID comme `net8.0/linux-x64/`).
+
+### Variables d'environnement
+- `EASY_SAVE_CRYPTOSOFT_PATH` : chemin explicite vers `CryptoSoft.dll` (ou l'exécutable) si tu veux forcer l'emplacement.
+- `EASY_SAVE_ENCRYPTION_KEY` : clé utilisée par CryptoSoft (si non fournie autrement).
+
+> Le temps de chiffrement dans les logs est ajouté dans la branche suivante (`feat/log-add-encryption-time`).

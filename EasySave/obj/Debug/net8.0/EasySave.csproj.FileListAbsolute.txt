@@ -1,37 +1,56 @@
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\bin\Debug\net8.0\EasySave.exe
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\bin\Debug\net8.0\EasySave.deps.json
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\bin\Debug\net8.0\EasySave.runtimeconfig.json
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\bin\Debug\net8.0\EasySave.dll
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\bin\Debug\net8.0\EasySave.pdb
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\bin\Debug\net8.0\EasyLog.dll
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\bin\Debug\net8.0\EasyLog.pdb
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.csproj.AssemblyReference.cache
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.AssemblyInfoInputs.cache
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.AssemblyInfo.cs
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.csproj.CoreCompileInputs.cache
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.csproj.Up2Date
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.dll
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\refint\EasySave.dll
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.pdb
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\EasySave.genruntimeconfig.cache
-C:\Users\hp\Desktop\VSCode\Génie Logiciel\EasySave\EasyLog\EasySave\obj\Debug\net8.0\ref\EasySave.dll
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.dll
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\refint\EasySave.dll
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.pdb
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\bin\Debug\net8.0\EasySave.exe
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\bin\Debug\net8.0\EasySave.deps.json
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\bin\Debug\net8.0\EasySave.runtimeconfig.json
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\bin\Debug\net8.0\EasySave.dll
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\bin\Debug\net8.0\EasySave.pdb
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\bin\Debug\net8.0\EasyLog.dll
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\bin\Debug\net8.0\EasyLog.pdb
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.csproj.AssemblyReference.cache
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.AssemblyInfoInputs.cache
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.AssemblyInfo.cs
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.csproj.CoreCompileInputs.cache
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.sourcelink.json
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.csproj.Up2Date
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\EasySave.genruntimeconfig.cache
-C:\Users\hp\source\repos\Cesi-Genie-Logiciel\easySave_Cesi\EasySave\obj\Debug\net8.0\ref\EasySave.dll
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/bin/Debug/net8.0/EasySave.exe
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/bin/Debug/net8.0/EasySave.deps.json
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/bin/Debug/net8.0/EasySave.runtimeconfig.json
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/bin/Debug/net8.0/EasySave.dll
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/bin/Debug/net8.0/EasySave.pdb
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/bin/Debug/net8.0/EasyLog.dll
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/bin/Debug/net8.0/EasyLog.pdb
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.csproj.AssemblyReference.cache
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.GeneratedMSBuildEditorConfig.editorconfig
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.AssemblyInfoInputs.cache
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.AssemblyInfo.cs
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.csproj.CoreCompileInputs.cache
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.csproj.Up2Date
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.dll
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/refint/EasySave.dll
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.pdb
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/EasySave.genruntimeconfig.cache
+C:/Users/hp/Desktop/VSCode/Génie Logiciel/EasySave/EasyLog/EasySave/obj/Debug/net8.0/ref/EasySave.dll
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.dll
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/refint/EasySave.dll
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.pdb
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.exe
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.deps.json
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.runtimeconfig.json
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.dll
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.pdb
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/bin/Debug/net8.0/EasyLog.dll
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/bin/Debug/net8.0/EasyLog.pdb
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.csproj.AssemblyReference.cache
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.GeneratedMSBuildEditorConfig.editorconfig
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.AssemblyInfoInputs.cache
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.AssemblyInfo.cs
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.csproj.CoreCompileInputs.cache
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.sourcelink.json
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.csproj.Up2Date
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.genruntimeconfig.cache
+C:/Users/hp/source/repos/Cesi-Genie-Logiciel/easySave_Cesi/EasySave/obj/Debug/net8.0/ref/EasySave.dll
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.deps.json
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.runtimeconfig.json
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.dll
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/bin/Debug/net8.0/EasySave.pdb
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/bin/Debug/net8.0/EasyLog.dll
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/bin/Debug/net8.0/EasyLog.pdb
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.csproj.AssemblyReference.cache
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.GeneratedMSBuildEditorConfig.editorconfig
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.AssemblyInfoInputs.cache
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.AssemblyInfo.cs
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.csproj.CoreCompileInputs.cache
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.sourcelink.json
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.csproj.Up2Date
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.dll
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/refint/EasySave.dll
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.pdb
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/EasySave.genruntimeconfig.cache
+/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/Debug/net8.0/ref/EasySave.dll

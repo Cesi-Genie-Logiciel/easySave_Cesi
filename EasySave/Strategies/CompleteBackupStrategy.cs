@@ -9,6 +9,19 @@ namespace EasySave.Strategies
     /// </summary>
     public class CompleteBackupStrategy : IBackupStrategy
     {
+        private readonly ICryptoService? _cryptoService;
+
+        // Temporary: pulled from environment to avoid hardcoding secrets in code.
+        private readonly string _encryptionKey;
+
+        public CompleteBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null)
+        {
+            _cryptoService = cryptoService;
+            _encryptionKey = !string.IsNullOrWhiteSpace(encryptionKey)
+                ? encryptionKey
+                : (Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY") ?? "EasySave");
+        }
+
         public void Execute(BackupConfig config, BackupStats stats, Action<BackupEventArgs> notifyProgress)
         {
             if (!Directory.Exists(config.SourcePath))
@@ -42,6 +55,16 @@ namespace EasySave.Strategies
 
                     // Copy file
                     File.Copy(sourceFile, targetFile, overwrite: true);
+
+                    // Optional encryption (branch 1: always attempt when service is available)
+                    if (_cryptoService?.IsAvailable() == true)
+                    {
+                        var encCode = _cryptoService.EncryptInPlace(targetFile, _encryptionKey);
+                        if (encCode < 0)
+                        {
+                            Console.WriteLine($"[CryptoSoft] Encryption failed for '{targetFile}' (code {encCode}).");
+                        }
+                    }
 
                     startTime.Stop();
                     var fileInfo = new FileInfo(sourceFile);
