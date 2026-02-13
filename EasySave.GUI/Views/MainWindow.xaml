@@ -95,19 +95,33 @@
             </StackPanel>
         </Border>
 
-        <!-- Liste des jobs avec DataGrid moderne -->
-        <DataGrid Grid.Row="2" 
-                  ItemsSource="{Binding BackupJobs}" 
-                  SelectedItem="{Binding SelectedBackupJob}"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  GridLinesVisibility="None"
-                  AlternatingRowBackground="#F9F9F9"
-                  SelectionMode="Single"
-                  HeadersVisibility="Column"
-                  Margin="15"
-                  FontSize="13">
+        <!-- Grid avec liste et panneau détails -->
+        <Grid Grid.Row="2" Margin="15">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+            
+            <GridSplitter Grid.Column="1" 
+                          Width="5" 
+                          HorizontalAlignment="Center" 
+                          VerticalAlignment="Stretch"
+                          Background="#E0E0E0"
+                          ShowsPreview="True"/>
+            
+            <!-- Liste des jobs avec DataGrid moderne -->
+            <DataGrid Grid.Column="0"
+                      ItemsSource="{Binding BackupJobs}" 
+                      SelectedItem="{Binding SelectedBackupJob}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      GridLinesVisibility="None"
+                      AlternatingRowBackground="#F9F9F9"
+                      SelectionMode="Single"
+                      HeadersVisibility="Column"
+                      FontSize="13">
             
             <DataGrid.Columns>
                 <!-- Nom -->
@@ -124,28 +138,56 @@
                 </DataGridTextColumn>
 
                 <!-- Source -->
-                <DataGridTextColumn Header="Chemin Source" 
-                                    Binding="{Binding SourcePath}" 
-                                    Width="250"
-                                    IsReadOnly="True">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="8,5"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                <DataGridTemplateColumn Header="Chemin Source" Width="250">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding SourcePath}" 
+                                       Padding="8,5"
+                                       Cursor="Hand"
+                                       ToolTip="Double-cliquez pour ouvrir dans l'explorateur"
+                                       MouseLeftButtonDown="OpenFolder_Click"
+                                       Tag="{Binding SourcePath}"
+                                       TextDecorations="Underline">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#0078D4"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
 
                 <!-- Cible -->
-                <DataGridTextColumn Header="Chemin Cible" 
-                                    Binding="{Binding TargetPath}" 
-                                    Width="250"
-                                    IsReadOnly="True">
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Padding" Value="8,5"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
+                <DataGridTemplateColumn Header="Chemin Cible" Width="250">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding TargetPath}" 
+                                       Padding="8,5"
+                                       Cursor="Hand"
+                                       ToolTip="Double-cliquez pour ouvrir dans l'explorateur"
+                                       MouseLeftButtonDown="OpenFolder_Click"
+                                       Tag="{Binding TargetPath}"
+                                       TextDecorations="Underline">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#0078D4"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=IsSelected}" Value="True">
+                                                <Setter Property="Foreground" Value="White"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
 
                 <!-- Type -->
                 <DataGridTextColumn Header="Type" 
@@ -249,6 +291,108 @@
                 </Style>
             </DataGrid.RowStyle>
         </DataGrid>
+        
+        <!-- Panneau de détails du job sélectionné -->
+        <Border Grid.Column="2" 
+                Background="#F9F9F9" 
+                BorderBrush="#E0E0E0" 
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="15">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding SelectedBackupJob}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel>
+                <TextBlock Text="📋 Détails du Job" 
+                           FontSize="16" 
+                           FontWeight="Bold" 
+                           Margin="0,0,0,15"
+                           Foreground="#0078D4"/>
+                
+                <!-- Nom -->
+                <TextBlock Text="Nom :" FontWeight="SemiBold" Margin="0,5,0,2"/>
+                <TextBlock Text="{Binding SelectedBackupJob.Name}" 
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,10"/>
+                
+                <!-- Source -->
+                <TextBlock Text="Source :" FontWeight="SemiBold" Margin="0,5,0,2"/>
+                <TextBlock Text="{Binding SelectedBackupJob.SourcePath}" 
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,10"/>
+                
+                <!-- Cible -->
+                <TextBlock Text="Cible :" FontWeight="SemiBold" Margin="0,5,0,2"/>
+                <TextBlock Text="{Binding SelectedBackupJob.TargetPath}" 
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,10"/>
+                
+                <!-- Type -->
+                <TextBlock Text="Type :" FontWeight="SemiBold" Margin="0,5,0,2"/>
+                <TextBlock Text="{Binding SelectedBackupJob.BackupType}" 
+                           Margin="0,0,0,10"/>
+                
+                <!-- État -->
+                <TextBlock Text="État :" FontWeight="SemiBold" Margin="0,5,0,2"/>
+                <TextBlock Text="{Binding SelectedBackupJob.State}" 
+                           FontWeight="Bold"
+                           Margin="0,0,0,10"/>
+                
+                <!-- Progression -->
+                <TextBlock Text="Progression :" FontWeight="SemiBold" Margin="0,5,0,2"/>
+                <ProgressBar Value="{Binding SelectedBackupJob.Progress}" 
+                             Maximum="100" 
+                             Height="25"
+                             Margin="0,5,0,5"
+                             Background="#E0E0E0"
+                             Foreground="#107C10"/>
+                <TextBlock Text="{Binding SelectedBackupJob.Progress, StringFormat={}{0}%}" 
+                           HorizontalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,10"/>
+                
+                <!-- Fichiers -->
+                <TextBlock Text="Fichiers :" FontWeight="SemiBold" Margin="0,5,0,2"/>
+                <TextBlock Margin="0,0,0,10">
+                    <Run Text="{Binding SelectedBackupJob.FilesRemaining, Mode=OneWay}"/>
+                    <Run Text=" / "/>
+                    <Run Text="{Binding SelectedBackupJob.TotalFiles, Mode=OneWay}"/>
+                </TextBlock>
+                
+                <!-- Boutons d'action -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,15,0,0">
+                    <Button Content="▶️" 
+                            Command="{Binding SelectedBackupJob.PlayCommand}" 
+                            ToolTip="Lancer"
+                            Width="40" Height="35"
+                            Margin="2"
+                            Background="#107C10"
+                            Foreground="White"/>
+                    <Button Content="⏸️" 
+                            Command="{Binding SelectedBackupJob.PauseCommand}" 
+                            ToolTip="Pause"
+                            Width="40" Height="35"
+                            Margin="2"
+                            Background="#FF8C00"
+                            Foreground="White"/>
+                    <Button Content="⏹️" 
+                            Command="{Binding SelectedBackupJob.StopCommand}" 
+                            ToolTip="Arrêter"
+                            Width="40" Height="35"
+                            Margin="2"
+                            Background="#D13438"
+                            Foreground="White"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
 
         <!-- Status bar -->
         <Border Grid.Row="3" Background="#F3F3F3" Padding="15,10" BorderBrush="#E0E0E0" BorderThickness="0,1,0,0">
