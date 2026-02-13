@@ -1,7 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using ProSoft.EasyLog.Interfaces;
-using ProSoft.EasyLog;
 using EasySave.Interfaces;
 using EasySave.Models;
 
@@ -9,14 +8,14 @@ namespace EasySave.Observers
 {
     public class StateObserver : IBackupObserver
     {
-        private ILogger _logger;
-        private Dictionary<string, BackupState> _lastStates = new Dictionary<string, BackupState>();
-        
+        private readonly ILogger _logger;
+        private readonly Dictionary<string, BackupState> _lastStates = new Dictionary<string, BackupState>();
+
         public StateObserver(ILogger logger)
         {
             _logger = logger;
         }
-        
+
         public void OnBackupStarted(string backupName)
         {
             var state = new BackupState
@@ -27,9 +26,11 @@ namespace EasySave.Observers
                 Progress = 0
             };
             _lastStates[backupName] = state;
-            _logger.UpdateState(state);
+
+            // EasyLog v1.1: l'API de persistance d'état n'est pas encore implémentée.
+            _logger.UpdateStateToDisk();
         }
-        
+
         public void OnFileTransferred(BackupEventArgs e)
         {
             var state = new BackupState
@@ -46,13 +47,15 @@ namespace EasySave.Observers
                 Progress = e.Progress
             };
             _lastStates[e.BackupName] = state;
-            _logger.UpdateState(state);
+
+            // Placeholder (pas de UpdateState(state) dans l'interface ILogger)
+            _logger.UpdateStateToDisk();
         }
-        
+
         public void OnBackupCompleted(string backupName)
         {
             BackupState state;
-            
+
             // Récupérer le dernier état connu pour conserver les données
             if (_lastStates.TryGetValue(backupName, out var lastState))
             {
@@ -81,9 +84,11 @@ namespace EasySave.Observers
                     Progress = 100
                 };
             }
-            
+
             _lastStates[backupName] = state;
-            _logger.UpdateState(state);
+
+            // Placeholder (pas de UpdateState(state) dans l'interface ILogger)
+            _logger.UpdateStateToDisk();
         }
     }
 }

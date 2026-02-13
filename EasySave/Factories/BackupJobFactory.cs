@@ -5,6 +5,7 @@ using EasySave.Strategies;
 using EasySave.Observers;
 using EasySave.Interfaces;
 using ProSoft.EasyLog;
+using ProSoft.EasyLog.Implementation;
 
 namespace EasySave.Factories
 {
@@ -35,13 +36,15 @@ namespace EasySave.Factories
             
             // Créer le job
             var job = new BackupJob(name, source, target, strategy);
-            
+
             // Ajouter les observateurs
-            var logger = Logger.Instance;
+            // EasyLog: création via la factory (pas de singleton Logger.Instance dans cette implémentation)
+            var logger = LoggerFactory.CreateLogger(LogFormat.JSON, Path.Combine(target, "logs"));
+
             job.AddObserver(new ConsoleObserver());
             job.AddObserver(new LoggerObserver(logger));
             job.AddObserver(new StateObserver(logger));
-            
+
             return job;
         }
     }
