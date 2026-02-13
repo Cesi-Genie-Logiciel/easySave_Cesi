@@ -1,53 +1,24 @@
-﻿using EasySave.Interfaces;
+using System;
+using EasySave.Interfaces;
 using EasySave.Models;
 
 namespace EasySave.Observers
 {
-    /// <summary>
-    /// Observer that displays backup progress in console
-    /// </summary>
     public class ConsoleObserver : IBackupObserver
     {
         public void OnBackupStarted(string backupName)
         {
-            Console.WriteLine($"\n🚀 Démarrage de la sauvegarde : {backupName}");
-            Console.WriteLine(new string('=', 60));
+            Console.WriteLine($"  [Console] Backup '{backupName}' started");
         }
-
-        public void OnBackupProgress(BackupEventArgs eventArgs)
+        
+        public void OnFileTransferred(BackupEventArgs e)
         {
-            if (eventArgs.TransferTime >= 0)
-            {
-                // Succès
-                Console.WriteLine(
-                    $"✅ [{eventArgs.ProcessedFiles}/{eventArgs.TotalFiles}] " +
-                    $"{Path.GetFileName(eventArgs.SourceFile)} " +
-                    $"({eventArgs.FileSize / 1024} KB, {eventArgs.TransferTime}ms) " +
-                    $"- {eventArgs.Stats.Progress}%"
-                );
-            }
-            else
-            {
-                // Erreur
-                Console.WriteLine(
-                    $"❌ [{eventArgs.ProcessedFiles}/{eventArgs.TotalFiles}] " +
-                    $"{Path.GetFileName(eventArgs.SourceFile)} - ERREUR"
-                );
-            }
+            Console.WriteLine($"  [Console] Progress: {e.Progress}% ({e.ProcessedFiles}/{e.TotalFiles} files)");
         }
-
-        public void OnBackupCompleted(string backupName, bool success)
+        
+        public void OnBackupCompleted(string backupName)
         {
-            Console.WriteLine(new string('=', 60));
-            if (success)
-            {
-                Console.WriteLine($"✅ Sauvegarde terminée : {backupName}");
-            }
-            else
-            {
-                Console.WriteLine($"❌ Sauvegarde échouée : {backupName}");
-            }
-            Console.WriteLine();
+            Console.WriteLine($"  [Console] Backup '{backupName}' completed successfully");
         }
     }
 }

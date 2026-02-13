@@ -1,49 +1,33 @@
-﻿using EasySave.Interfaces;
-using EasySave.Models;
+using ProSoft.EasyLog.Interfaces;
 using ProSoft.EasyLog;
+using EasySave.Interfaces;
+using EasySave.Models;
 
 namespace EasySave.Observers
 {
-    /// <summary>
-    /// Observer that writes backup events to log files using EasyLog.dll
-    /// Only logs actual file transfers (OnBackupProgress), not start/end events
-    /// </summary>
     public class LoggerObserver : IBackupObserver
     {
-        private readonly JsonFileLogger _logger;
-
-        public LoggerObserver(string logDirectory)
+        private ILogger _logger;
+        
+        public LoggerObserver(ILogger logger)
         {
-            _logger = new JsonFileLogger(logDirectory);
+            _logger = logger;
         }
-
+        
         public void OnBackupStarted(string backupName)
         {
-            // Ne RIEN logger au démarrage
+            // Optionnel : logger le début
         }
-
-        public void OnBackupProgress(BackupEventArgs eventArgs)
+        
+        public void OnFileTransferred(BackupEventArgs e)
         {
-            // Vérification : Ne logger QUE si les données sont complètes
-            if (string.IsNullOrWhiteSpace(eventArgs.SourceFile) ||
-                string.IsNullOrWhiteSpace(eventArgs.BackupName))
-            {
-                return;
-            }
-
-            // Logger UNIQUEMENT les vrais transferts de fichiers
-            _logger.WriteLog(
-                backupName: eventArgs.BackupName,
-                sourceFilePath: eventArgs.SourceFile,
-                targetFilePath: eventArgs.DestFile,
-                fileSize: eventArgs.FileSize,
-                transferTime: eventArgs.TransferTime
-            );
+            _logger.LogFileTransfer(e.BackupName, e.SourceFile, e.DestFile, 
+                                   e.FileSize, e.TransferTimeMs);
         }
-
-        public void OnBackupCompleted(string backupName, bool success)
+        
+        public void OnBackupCompleted(string backupName)
         {
-            // Ne RIEN logger à la fin
+            // Optionnel : logger la fin
         }
     }
 }
