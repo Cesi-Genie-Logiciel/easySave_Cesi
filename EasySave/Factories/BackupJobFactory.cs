@@ -43,15 +43,19 @@ namespace EasySave.Factories
                 // Keep crypto optional.
             }
 
-            // Choisir la stratégie (dev) + injection crypto
+            // Ajouter les observateurs (dev)
+            // EasyLog: création via la factory (pas de singleton Logger.Instance dans cette implémentation)
+            var logger = LoggerFactory.CreateLogger(LogFormat.JSON, Path.Combine(target, "logs"));
+
+            // Choisir la stratégie (dev) + injection crypto + logger
             IBackupStrategy strategy;
             switch (type.ToLower())
             {
                 case "complete":
-                    strategy = new CompleteBackupStrategy(cryptoService);
+                    strategy = new CompleteBackupStrategy(cryptoService, logger: logger);
                     break;
                 case "differential":
-                    strategy = new DifferentialBackupStrategy(cryptoService);
+                    strategy = new DifferentialBackupStrategy(cryptoService, logger: logger);
                     break;
                 default:
                     throw new ArgumentException($"Unknown backup type: {type}");
@@ -59,10 +63,6 @@ namespace EasySave.Factories
 
             // Créer le job (dev)
             var job = new BackupJob(name, source, target, strategy);
-
-            // Ajouter les observateurs (dev)
-            // EasyLog: création via la factory (pas de singleton Logger.Instance dans cette implémentation)
-            var logger = LoggerFactory.CreateLogger(LogFormat.JSON, Path.Combine(target, "logs"));
 
             job.AddObserver(new ConsoleObserver());
             job.AddObserver(new LoggerObserver(logger));
