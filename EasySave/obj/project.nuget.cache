@@ -1,12 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "cXoxQyiL2LI=",
+  "dgSpecHash": "8KPo6sUB8Xo=",
   "success": true,
-  "projectFilePath": "/home/maxime/RiderProjects/easySave_Cesi/EasySave/EasySave.csproj",
+  "projectFilePath": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\EasySave.csproj",
   "expectedPackageFiles": [
-    "/home/maxime/.nuget/packages/microsoft.netcore.app.ref/8.0.22/microsoft.netcore.app.ref.8.0.22.nupkg.sha512",
-    "/home/maxime/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.22/microsoft.aspnetcore.app.ref.8.0.22.nupkg.sha512",
-    "/home/maxime/.nuget/packages/microsoft.netcore.app.host.linux-x64/8.0.22/microsoft.netcore.app.host.linux-x64.8.0.22.nupkg.sha512"
+    "C:\\Users\\hp\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.24\\microsoft.netcore.app.ref.8.0.24.nupkg.sha512",
+    "C:\\Users\\hp\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.24\\microsoft.windowsdesktop.app.ref.8.0.24.nupkg.sha512",
+    "C:\\Users\\hp\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.24\\microsoft.aspnetcore.app.ref.8.0.24.nupkg.sha512",
+    "C:\\Users\\hp\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\8.0.24\\microsoft.netcore.app.host.win-x64.8.0.24.nupkg.sha512"
   ],
   "logs": []
 }
