@@ -21,12 +21,27 @@ namespace EasySave.Observers
 
         public void OnFileTransferred(BackupEventArgs e)
         {
-            _logger.LogFileTransfer(
-                e.BackupName,
-                e.SourceFile,
-                e.DestFile,
-                e.FileSize,
-                Convert.ToInt64(e.TransferTimeMs));
+            // v2.0: log transfer time + encryption time
+            try
+            {
+                _logger.LogFileTransfer(
+                    e.BackupName,
+                    e.SourceFile,
+                    e.DestFile,
+                    e.FileSize,
+                    Convert.ToInt64(e.TransferTimeMs),
+                    e.EncryptionTimeMs);
+            }
+            catch
+            {
+                // Fallback (v1): log without encryption time.
+                _logger.LogFileTransfer(
+                    e.BackupName,
+                    e.SourceFile,
+                    e.DestFile,
+                    e.FileSize,
+                    Convert.ToInt64(e.TransferTimeMs));
+            }
         }
 
         public void OnBackupCompleted(string backupName)

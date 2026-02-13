@@ -55,13 +55,25 @@ namespace EasySave.Strategies
                 var stopwatch = Stopwatch.StartNew();
                 File.Copy(file, destFile, overwrite: true);
 
-                // CryptoSoft integration (branch P4): encrypt copied file if service is available
+                long encryptionTimeMs = 0;
+
+                // CryptoSoft integration (P4): encrypt copied file if service is available
                 if (_cryptoService?.IsAvailable() == true)
                 {
-                    var encCode = _cryptoService.EncryptInPlace(destFile, _encryptionKey);
-                    if (encCode < 0)
+                    // Prefer duration when CryptoSoftService is used
+                    if (_cryptoService is EasySave.Services.CryptoSoftService crypto)
                     {
-                        Console.WriteLine($"[CryptoSoft] Encryption failed for '{destFile}' (code {encCode}).");
+                        encryptionTimeMs = crypto.EncryptInPlaceWithDurationMs(destFile, _encryptionKey);
+                    }
+                    else
+                    {
+                        var encCode = _cryptoService.EncryptInPlace(destFile, _encryptionKey);
+                        encryptionTimeMs = encCode < 0 ? encCode : 0;
+                    }
+
+                    if (encryptionTimeMs < 0)
+                    {
+                        Console.WriteLine($"[CryptoSoft] Encryption failed for '{destFile}' (code {encryptionTimeMs}).");
                     }
                 }
 
@@ -81,6 +93,7 @@ namespace EasySave.Strategies
                         DestFile = destFile,
                         FileSize = fileInfo.Length,
                         TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                        EncryptionTimeMs = encryptionTimeMs,
                         TotalFiles = totalFiles,
                         ProcessedFiles = processedFiles,
                         Progress = (int)((processedFiles * 100.0) / totalFiles)
