@@ -1,8 +1,12 @@
 {
   "version": 2,
-  "dgSpecHash": "6k0NZNj7I4k=",
+  "dgSpecHash": "cXoxQyiL2LI=",
   "success": true,
-  "projectFilePath": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\EasySave.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "/home/maxime/RiderProjects/easySave_Cesi/EasySave/EasySave.csproj",
+  "expectedPackageFiles": [
+    "/home/maxime/.nuget/packages/microsoft.netcore.app.ref/8.0.22/microsoft.netcore.app.ref.8.0.22.nupkg.sha512",
+    "/home/maxime/.nuget/packages/microsoft.aspnetcore.app.ref/8.0.22/microsoft.aspnetcore.app.ref.8.0.22.nupkg.sha512",
+    "/home/maxime/.nuget/packages/microsoft.netcore.app.host.linux-x64/8.0.22/microsoft.netcore.app.host.linux-x64.8.0.22.nupkg.sha512"
+  ],
   "logs": []
 }
