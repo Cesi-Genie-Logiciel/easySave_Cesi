@@ -214,7 +214,7 @@ Ces ajouts sont nécessaires pour permettre la **communication entre les straté
 - Le fichier d'état serait incomplet (pas de données de progression)
 
 **Impact :**
-- ❌ Aucun : Ces détails sont **internes** et n'affectent pas l'interface publique
+- ❌ Aucun : Ces détails sont des **internes** et n'affectent pas l'interface publique
 - ✅ L'interface `IBackupStrategy.ExecuteBackup(string, string)` reste strictement conforme au diagramme
 - ✅ Le pattern Strategy est préservé
 - ✅ Le pattern Observer fonctionne correctement
