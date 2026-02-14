@@ -78,33 +78,15 @@ namespace EasySave.Factories
             // EasyLog: création via la factory
             var logger = LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, Path.Combine(target, "logs"));
 
-            // Load extensions to encrypt from appsettings.json
-            List<string> extensionsToEncrypt = new List<string>();
-            try
-            {
-                var settingsService = new SettingsService();
-                var settings = settingsService.GetCurrent();
-                extensionsToEncrypt = settings.ExtensionsToEncrypt ?? new List<string>();
-                
-                if (extensionsToEncrypt.Count > 0)
-                {
-                    Console.WriteLine($"[CryptoSoft] Extensions to encrypt: {string.Join(", ", extensionsToEncrypt)}");
-                }
-            }
-            catch
-            {
-                // If settings cannot be loaded, default to empty list (no encryption)
-            }
-
             // Select strategy + inject crypto + logger (needed for JobEventType.Interrupted)
             IBackupStrategy strategy;
             switch (type.ToLower())
             {
                 case "complete":
-                    strategy = new CompleteBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensionsToEncrypt);
+                    strategy = new CompleteBackupStrategy(cryptoService, logger: logger);
                     break;
                 case "differential":
-                    strategy = new DifferentialBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensionsToEncrypt);
+                    strategy = new DifferentialBackupStrategy(cryptoService, logger: logger);
                     break;
                 default:
                     throw new ArgumentException($"Unknown backup type: {type}");
