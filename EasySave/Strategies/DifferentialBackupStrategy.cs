@@ -3,6 +3,9 @@ using System.Diagnostics;
 using System.IO;
 using EasySave.Interfaces;
 using EasySave.Models;
+using EasySave.Services;
+using ProSoft.EasyLog.Interfaces;
+using ProSoft.EasyLog.Models;
 
 namespace EasySave.Strategies
 {
@@ -10,16 +13,22 @@ namespace EasySave.Strategies
     {
         private readonly ICryptoService? _cryptoService;
         private readonly string _encryptionKey;
+        private readonly BusinessSoftwareMonitor _businessSoftwareMonitor;
+        private readonly ILogger? _logger;
 
         private Action<BackupEventArgs>? _onFileTransferred;
         private string _backupName = string.Empty;
+        private bool _interruptionLogged;
 
-        public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null)
+        public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null, ILogger? logger = null)
         {
             _cryptoService = cryptoService;
             _encryptionKey = !string.IsNullOrWhiteSpace(encryptionKey)
                 ? encryptionKey
                 : (Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY") ?? "EasySave");
+
+            _businessSoftwareMonitor = new BusinessSoftwareMonitor();
+            _logger = logger;
         }
 
         public void SetNotificationCallback(Action<BackupEventArgs> callback, string backupName)
@@ -43,6 +52,24 @@ namespace EasySave.Strategies
 
             foreach (var file in allFiles)
             {
+                // Business software detection: stop between files (finish current file, then stop).
+                if (_businessSoftwareMonitor.IsRunning())
+                {
+                    Console.WriteLine($"  [BusinessSoftware] Backup '{_backupName}' interrupted: business software detected.");
+
+                    if (!_interruptionLogged)
+                    {
+                        _interruptionLogged = true;
+                        _logger?.LogJobEvent(
+                            _backupName,
+                            JobEventType.Interrupted,
+                            "Business software detected during execution",
+                            _businessSoftwareMonitor.ProcessName);
+                    }
+
+                    break;
+                }
+
                 string relativePath = Path.GetRelativePath(sourcePath, file);
                 string destFile = Path.Combine(targetPath, relativePath);
 
@@ -58,13 +85,24 @@ namespace EasySave.Strategies
                     var stopwatch = Stopwatch.StartNew();
                     File.Copy(file, destFile, overwrite: true);
 
+                    long encryptionTimeMs = 0;
+
                     // CryptoSoft integration (branch P4): encrypt copied file if service is available
                     if (_cryptoService?.IsAvailable() == true)
                     {
-                        var encCode = _cryptoService.EncryptInPlace(destFile, _encryptionKey);
-                        if (encCode < 0)
+                        if (_cryptoService is EasySave.Services.CryptoSoftService crypto)
                         {
-                            Console.WriteLine($"[CryptoSoft] Encryption failed for '{destFile}' (code {encCode}).");
+                            encryptionTimeMs = crypto.EncryptInPlaceWithDurationMs(destFile, _encryptionKey);
+                        }
+                        else
+                        {
+                            var encCode = _cryptoService.EncryptInPlace(destFile, _encryptionKey);
+                            encryptionTimeMs = encCode < 0 ? encCode : 0;
+                        }
+
+                        if (encryptionTimeMs < 0)
+                        {
+                            Console.WriteLine($"[CryptoSoft] Encryption failed for '{destFile}' (code {encryptionTimeMs}).");
                         }
                     }
 
@@ -84,6 +122,7 @@ namespace EasySave.Strategies
                             DestFile = destFile,
                             FileSize = fileInfo.Length,
                             TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
+                            EncryptionTimeMs = encryptionTimeMs,
                             TotalFiles = totalFiles,
                             ProcessedFiles = processedFiles,
                             Progress = (int)((processedFiles * 100.0) / totalFiles)

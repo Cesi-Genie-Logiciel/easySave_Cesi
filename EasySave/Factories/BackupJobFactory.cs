@@ -54,15 +54,18 @@ namespace EasySave.Factories
                 // Keep crypto optional - continue without it if unavailable
             }
 
-            // Select backup strategy based on type + inject crypto service
+            // EasyLog: création via la factory
+            var logger = LoggerFactory.CreateLogger(LogFormat.JSON, Path.Combine(target, "logs"));
+
+            // Select strategy + inject crypto + logger (needed for JobEventType.Interrupted)
             IBackupStrategy strategy;
             switch (type.ToLower())
             {
                 case "complete":
-                    strategy = new CompleteBackupStrategy(cryptoService);
+                    strategy = new CompleteBackupStrategy(cryptoService, logger: logger);
                     break;
                 case "differential":
-                    strategy = new DifferentialBackupStrategy(cryptoService);
+                    strategy = new DifferentialBackupStrategy(cryptoService, logger: logger);
                     break;
                 default:
                     throw new ArgumentException($"Unknown backup type: {type}");
@@ -70,12 +73,6 @@ namespace EasySave.Factories
 
             // Create the backup job with selected strategy
             var job = new BackupJob(name, source, target, strategy);
-
-            // Setup logger with JSON formatter for v2.0
-            // Logger uses dependency injection (no singleton pattern)
-            var jsonFormatter = new JsonLogFormatter();
-            var logDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
-            var logger = new Logger(jsonFormatter, logDirectory);
 
             // Attach observers for monitoring and logging
             job.AddObserver(new ConsoleObserver());
