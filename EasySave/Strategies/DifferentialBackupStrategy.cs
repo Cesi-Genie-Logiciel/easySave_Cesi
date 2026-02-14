@@ -15,12 +15,13 @@ namespace EasySave.Strategies
         private readonly string _encryptionKey;
         private readonly BusinessSoftwareMonitor _businessSoftwareMonitor;
         private readonly ILogger? _logger;
+        private readonly List<string> _extensionsToEncrypt;
 
         private Action<BackupEventArgs>? _onFileTransferred;
         private string _backupName = string.Empty;
         private bool _interruptionLogged;
 
-        public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null, ILogger? logger = null)
+        public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null, ILogger? logger = null, List<string>? extensionsToEncrypt = null)
         {
             _cryptoService = cryptoService;
             _encryptionKey = !string.IsNullOrWhiteSpace(encryptionKey)
@@ -29,6 +30,7 @@ namespace EasySave.Strategies
 
             _businessSoftwareMonitor = new BusinessSoftwareMonitor();
             _logger = logger;
+            _extensionsToEncrypt = extensionsToEncrypt ?? new List<string>();
         }
 
         public void SetNotificationCallback(Action<BackupEventArgs> callback, string backupName)
@@ -87,9 +89,13 @@ namespace EasySave.Strategies
 
                     long encryptionTimeMs = 0;
 
-                    // CryptoSoft integration (branch P4): encrypt copied file if service is available
-                    if (_cryptoService?.IsAvailable() == true)
+                    // CryptoSoft integration (branch P4): encrypt copied file if service is available AND extension matches
+                    var fileExtension = Path.GetExtension(destFile).ToLower();
+                    bool shouldEncrypt = _extensionsToEncrypt.Count > 0 && _extensionsToEncrypt.Any(ext => ext.ToLower() == fileExtension);
+                    
+                    if (_cryptoService?.IsAvailable() == true && shouldEncrypt)
                     {
+                        Console.WriteLine($"[CryptoSoft] Encrypting {Path.GetFileName(destFile)} (extension: {fileExtension})");
                         if (_cryptoService is EasySave.Services.CryptoSoftService crypto)
                         {
                             encryptionTimeMs = crypto.EncryptInPlaceWithDurationMs(destFile, _encryptionKey);
@@ -103,6 +109,10 @@ namespace EasySave.Strategies
                         if (encryptionTimeMs < 0)
                         {
                             Console.WriteLine($"[CryptoSoft] Encryption failed for '{destFile}' (code {encryptionTimeMs}).");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[CryptoSoft] Encrypted successfully in {encryptionTimeMs}ms");
                         }
                     }
 

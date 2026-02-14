@@ -78,15 +78,38 @@ namespace EasySave.Factories
             // EasyLog: création via la factory
             var logger = LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, Path.Combine(target, "logs"));
 
+            // Load extensions to encrypt from appsettings.json
+            List<string> extensionsToEncrypt = new List<string>();
+            try
+            {
+                var settingsService = new SettingsService();
+                var settings = settingsService.GetCurrent();
+                extensionsToEncrypt = settings.ExtensionsToEncrypt ?? new List<string>();
+                
+                if (extensionsToEncrypt.Count > 0)
+                {
+                    Console.WriteLine($"[CryptoSoft] Extensions to encrypt: {string.Join(", ", extensionsToEncrypt)}");
+                }
+                else
+                {
+                    Console.WriteLine("[CryptoSoft] No extensions configured for encryption");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[CryptoSoft] Error loading settings: {ex.Message}");
+                // If settings cannot be loaded, default to empty list (no encryption)
+            }
+
             // Select strategy + inject crypto + logger (needed for JobEventType.Interrupted)
             IBackupStrategy strategy;
             switch (type.ToLower())
             {
                 case "complete":
-                    strategy = new CompleteBackupStrategy(cryptoService, logger: logger);
+                    strategy = new CompleteBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensionsToEncrypt);
                     break;
                 case "differential":
-                    strategy = new DifferentialBackupStrategy(cryptoService, logger: logger);
+                    strategy = new DifferentialBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensionsToEncrypt);
                     break;
                 default:
                     throw new ArgumentException($"Unknown backup type: {type}");
