@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using EasySave.Interfaces;
 using EasySave.Services;
+using EasySave.Models;
 
 namespace EasySave
 {
@@ -14,6 +15,10 @@ namespace EasySave
             Console.WriteLine("=================================");
             Console.WriteLine("   EASYSAVE v1.0 - ProSoft");
             Console.WriteLine("=================================\n");
+            
+            // Initialiser le service de configuration (Feature P2)
+            ISettingsService settingsService = new SettingsService();
+            Console.WriteLine();
             
             IBackupService service = new BackupService();
             bool running = true;
@@ -43,6 +48,9 @@ namespace EasySave
                             DeleteJob(service);
                             break;
                         case "6":
+                            ViewSettings(settingsService);
+                            break;
+                        case "7":
                             running = false;
                             Console.WriteLine("\n👋 Goodbye!");
                             break;
@@ -75,7 +83,8 @@ namespace EasySave
             Console.WriteLine("║  3. Execute a backup job                       ║");
             Console.WriteLine("║  4. Execute multiple backup jobs               ║");
             Console.WriteLine("║  5. Delete a backup job                        ║");
-            Console.WriteLine("║  6. Quit                                       ║");
+            Console.WriteLine("║  6. View/Edit settings [P2 TEST]               ║");
+            Console.WriteLine("║  7. Quit                                       ║");
             Console.WriteLine("╚════════════════════════════════════════════════╝");
             Console.Write("\nYour choice: ");
         }
@@ -272,6 +281,85 @@ namespace EasySave
             
             service.DeleteBackupJob(index - 1);
             Console.WriteLine($"\n✅ Job '{jobName}' deleted successfully!");
+        }
+        
+        static void ViewSettings(ISettingsService settingsService)
+        {
+            try { Console.Clear(); } catch { }
+            Console.WriteLine("\n--- APPLICATION SETTINGS (P2 Feature Test) ---\n");
+            
+            var settings = settingsService.GetCurrent();
+            
+            Console.WriteLine("Current Settings:");
+            Console.WriteLine($"  Log Format: {settings.LogFormat}");
+            Console.WriteLine($"  Extensions to Encrypt: {string.Join(", ", settings.ExtensionsToEncrypt)}");
+            Console.WriteLine($"  Business Software: {(string.IsNullOrEmpty(settings.BusinessSoftwareName) ? "None" : settings.BusinessSoftwareName)}");
+            
+            Console.WriteLine("\n\nOptions:");
+            Console.WriteLine("  1. Change Log Format (JSON/XML)");
+            Console.WriteLine("  2. Add Extension to Encrypt");
+            Console.WriteLine("  3. Set Business Software Name");
+            Console.WriteLine("  4. Reload Settings from File");
+            Console.WriteLine("  5. Save Current Settings");
+            Console.WriteLine("  6. Back to Main Menu");
+            
+            Console.Write("\nYour choice: ");
+            string? choice = Console.ReadLine();
+            
+            switch (choice)
+            {
+                case "1":
+                    Console.Write("\nNew format (JSON/XML): ");
+                    string? format = Console.ReadLine();
+                    if (format?.ToUpper() == "JSON")
+                        settings.LogFormat = LogFormat.JSON;
+                    else if (format?.ToUpper() == "XML")
+                        settings.LogFormat = LogFormat.XML;
+                    else
+                        Console.WriteLine("❌ Invalid format. Must be JSON or XML.");
+                    break;
+                    
+                case "2":
+                    Console.Write("\nExtension to add (e.g., .doc): ");
+                    string? ext = Console.ReadLine();
+                    if (!string.IsNullOrWhiteSpace(ext))
+                    {
+                        if (!settings.ExtensionsToEncrypt.Contains(ext))
+                        {
+                            settings.ExtensionsToEncrypt.Add(ext);
+                            Console.WriteLine($"✅ Extension '{ext}' added.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"⚠️  Extension '{ext}' already in list.");
+                        }
+                    }
+                    break;
+                    
+                case "3":
+                    Console.Write("\nBusiness Software Name: ");
+                    string? softwareName = Console.ReadLine();
+                    settings.BusinessSoftwareName = softwareName ?? "";
+                    Console.WriteLine("✅ Business Software Name updated.");
+                    break;
+                    
+                case "4":
+                    settingsService.Reload();
+                    Console.WriteLine("\n✅ Settings reloaded from file.");
+                    break;
+                    
+                case "5":
+                    settingsService.Save(settings);
+                    Console.WriteLine("\n✅ Settings saved to file.");
+                    break;
+                    
+                case "6":
+                    return;
+                    
+                default:
+                    Console.WriteLine("❌ Invalid choice.");
+                    break;
+            }
         }
     }
 }

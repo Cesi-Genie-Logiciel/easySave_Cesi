@@ -1,0 +1,222 @@
+﻿<Window x:Class="EasySave.WPF.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="EasySave v2.0 - Backup Manager" 
+        Height="650" Width="1100"
+        MinHeight="500" MinWidth="900"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#2196F3"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#1976D2"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#CCCCCC"/>
+                    <Setter Property="Cursor" Value="Arrow"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="ProgressBar">
+            <Setter Property="Height" Value="22"/>
+            <Setter Property="Foreground" Value="#4CAF50"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" 
+                Background="#F5F5F5" 
+                CornerRadius="4" 
+                Padding="10" 
+                Margin="0,0,0,15">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="➕ New Job" 
+                        Command="{Binding CreateBackupCommand}" 
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Margin="0,0,10,0"
+                        ToolTip="Create a new backup job"/>
+
+                <Button Content="▶ Run Selected" 
+                        Command="{Binding ExecuteBackupCommand}" 
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Margin="0,0,10,0"
+                        ToolTip="Execute the selected job"/>
+
+                <Button Content="▶▶ Run All" 
+                        Command="{Binding ExecuteAllCommand}" 
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        ToolTip="Execute all jobs sequentially"/>
+
+                <TextBlock Text="{Binding BackupJobs.Count, StringFormat='Jobs: {0}'}" 
+                           VerticalAlignment="Center" 
+                           Margin="20,0,0,0"
+                           FontWeight="SemiBold"
+                           FontSize="14"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" 
+                BorderBrush="#E0E0E0" 
+                BorderThickness="1" 
+                CornerRadius="4"
+                Margin="0,0,0,15">
+            <ListView ItemsSource="{Binding BackupJobs}" 
+                      SelectedItem="{Binding SelectedBackupJob}"
+                      BorderThickness="0">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Job Name" Width="180">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" 
+                                             FontWeight="SemiBold"
+                                             Padding="5,0"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="Source Folder" Width="220">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding SourcePath}" 
+                                             Padding="5,0"
+                                             TextTrimming="CharacterEllipsis"
+                                             ToolTip="{Binding SourcePath}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="Target Folder" Width="220">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding TargetPath}" 
+                                             Padding="5,0"
+                                             TextTrimming="CharacterEllipsis"
+                                             ToolTip="{Binding TargetPath}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="Type" Width="120">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding BackupType}" 
+                                             Padding="5,0"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="State" Width="100">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding State}" 
+                                             Padding="5,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding State}" Value="Running">
+                                                        <Setter Property="Foreground" Value="#FF9800"/>
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding State}" Value="Completed">
+                                                        <Setter Property="Foreground" Value="#4CAF50"/>
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding State}" Value="Error">
+                                                        <Setter Property="Foreground" Value="#F44336"/>
+                                                        <Setter Property="FontWeight" Value="Bold"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+
+                        <GridViewColumn Header="Progress" Width="120">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <ProgressBar Value="{Binding Progress}" 
+                                                   Maximum="100" 
+                                                   Height="20"/>
+                                        <TextBlock Text="{Binding Progress, StringFormat={}{0}%}" 
+                                                 HorizontalAlignment="Center"
+                                                 VerticalAlignment="Center"
+                                                 FontSize="11"
+                                                 FontWeight="SemiBold"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </Border>
+
+        <Border Grid.Row="2" 
+                Background="#F5F5F5" 
+                CornerRadius="4" 
+                Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                         Text="{Binding StatusText}" 
+                         VerticalAlignment="Center"
+                         FontSize="13"
+                         Margin="0,0,15,0"/>
+
+                <StackPanel Grid.Column="1" 
+                          Orientation="Horizontal" 
+                          VerticalAlignment="Center">
+                    <TextBlock Text="Global Progress:" 
+                             VerticalAlignment="Center" 
+                             Margin="0,0,10,0"
+                             FontSize="12"/>
+                    <ProgressBar Value="{Binding GlobalProgress}" 
+                               Maximum="100" 
+                               Width="250"/>
+                    <TextBlock Text="{Binding GlobalProgress, StringFormat={}{0:F0}%}" 
+                             VerticalAlignment="Center" 
+                             Margin="10,0,0,0"
+                             FontWeight="SemiBold"
+                             FontSize="12"
+                             MinWidth="40"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

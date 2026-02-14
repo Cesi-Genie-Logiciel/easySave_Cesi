@@ -1,26 +1,27 @@
 {
   "format": 1,
   "restore": {
-    "/home/maxime/RiderProjects/easySave_Cesi/EasySave/EasySave.csproj": {}
+    "C:\\Users\\micha\\source\\repos\\easySave_Cesi\\EasySave\\EasySave.csproj": {}
   },
   "projects": {
-    "/home/maxime/RiderProjects/easyLog_Cesi/EasyLog/EasyLog.csproj": {
+    "C:\\Users\\micha\\source\\repos\\easyLog_Cesi\\EasyLog\\EasyLog.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/maxime/RiderProjects/easyLog_Cesi/EasyLog/EasyLog.csproj",
+        "projectUniqueName": "C:\\Users\\micha\\source\\repos\\easyLog_Cesi\\EasyLog\\EasyLog.csproj",
         "projectName": "EasyLog",
-        "projectPath": "/home/maxime/RiderProjects/easyLog_Cesi/EasyLog/EasyLog.csproj",
-        "packagesPath": "/home/maxime/.nuget/packages/",
-        "outputPath": "/home/maxime/RiderProjects/easyLog_Cesi/EasyLog/obj/",
+        "projectPath": "C:\\Users\\micha\\source\\repos\\easyLog_Cesi\\EasyLog\\EasyLog.csproj",
+        "packagesPath": "C:\\Users\\micha\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\micha\\source\\repos\\easyLog_Cesi\\EasyLog\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/maxime/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\micha\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -55,50 +56,41 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.101/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     },
-    "/home/maxime/RiderProjects/easySave_Cesi/EasySave/EasySave.csproj": {
+    "C:\\Users\\micha\\source\\repos\\easySave_Cesi\\EasySave\\EasySave.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/maxime/RiderProjects/easySave_Cesi/EasySave/EasySave.csproj",
+        "projectUniqueName": "C:\\Users\\micha\\source\\repos\\easySave_Cesi\\EasySave\\EasySave.csproj",
         "projectName": "EasySave",
-        "projectPath": "/home/maxime/RiderProjects/easySave_Cesi/EasySave/EasySave.csproj",
-        "packagesPath": "/home/maxime/.nuget/packages/",
-        "outputPath": "/home/maxime/RiderProjects/easySave_Cesi/EasySave/obj/",
+        "projectPath": "C:\\Users\\micha\\source\\repos\\easySave_Cesi\\EasySave\\EasySave.csproj",
+        "packagesPath": "C:\\Users\\micha\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\micha\\source\\repos\\easySave_Cesi\\EasySave\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/maxime/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\micha\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net8.0": {
             "targetAlias": "net8.0",
             "projectReferences": {
-              "/home/maxime/RiderProjects/easyLog_Cesi/EasyLog/EasyLog.csproj": {
-                "projectPath": "/home/maxime/RiderProjects/easyLog_Cesi/EasyLog/EasyLog.csproj"
+              "C:\\Users\\micha\\source\\repos\\easyLog_Cesi\\EasyLog\\EasyLog.csproj": {
+                "projectPath": "C:\\Users\\micha\\source\\repos\\easyLog_Cesi\\EasyLog\\EasyLog.csproj"
               }
             }
           }
@@ -129,26 +121,12 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Host.linux-x64",
-              "version": "[8.0.22, 8.0.22]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.101/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
