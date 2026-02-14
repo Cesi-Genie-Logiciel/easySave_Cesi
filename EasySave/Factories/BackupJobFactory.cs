@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Collections.Generic;
 using EasySave.Models;
 using EasySave.Strategies;
 using EasySave.Observers;
@@ -35,23 +37,42 @@ namespace EasySave.Factories
             // CryptoSoft integration: try to wire the external tool if present
             // If not present, strategies still work normally without encryption
             ICryptoService? cryptoService = null;
+            string? cryptoPath = null;
             try
             {
                 var overridePath = Environment.GetEnvironmentVariable("EASY_SAVE_CRYPTOSOFT_PATH");
-                var cryptoPath = !string.IsNullOrWhiteSpace(overridePath)
+                cryptoPath = !string.IsNullOrWhiteSpace(overridePath)
                     ? overridePath
                     : CryptoSoftService.TryGetDefaultCryptoSoftPath();
+
+                // Fallback candidates (cross-platform, includes RID folders like linux-x64)
+                if (string.IsNullOrWhiteSpace(cryptoPath) || !File.Exists(cryptoPath))
+                {
+                    cryptoPath = CryptoSoftService.GetDefaultCryptoSoftCandidatesForDebug()
+                        .FirstOrDefault(File.Exists);
+                }
 
                 if (!string.IsNullOrWhiteSpace(cryptoPath))
                 {
                     var service = new CryptoSoftService(cryptoPath);
                     if (service.IsAvailable())
+                    {
                         cryptoService = service;
+                        // CryptoSoft found and wired.
+                    }
                 }
             }
             catch
             {
                 // Keep crypto optional - continue without it if unavailable
+            }
+
+            if (cryptoService == null)
+            {
+                // Minimal diagnostic to avoid silent 'EncryptionTime=0' when CryptoSoft isn't even found.
+                Console.WriteLine("[CryptoSoft] Not available. Set EASY_SAVE_CRYPTOSOFT_PATH to the CryptoSoft executable/DLL.");
+                if (!string.IsNullOrWhiteSpace(cryptoPath))
+                    Console.WriteLine($"[CryptoSoft] Last candidate checked: {cryptoPath}");
             }
 
             // EasyLog: création via la factory

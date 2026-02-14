@@ -48,15 +48,10 @@ public sealed class CryptoSoftService : ICryptoService
                 return -14; // timeout
             }
 
-            // Drain output for diagnosis (CryptoSoft currently writes args / errors to console)
-            // Keeping it internal: returned via negative codes only; messages are printed by strategies on failure.
-            var stdErr = process.StandardError.ReadToEnd();
-            var stdOut = process.StandardOutput.ReadToEnd();
-
+            // Convention: negative exit code = error; non-negative = success.
             if (process.ExitCode < 0)
                 return process.ExitCode;
 
-            // If CryptoSoft exits >=0 it's elapsed ms; normalize to success.
             return 0;
         }
         catch
@@ -208,8 +203,9 @@ public sealed class CryptoSoftService : ICryptoService
 
     private static string? TryFindRepoRootDirectory(string startDirectory)
     {
-        // We use a stable marker present at repo root.
-        const string markerFileName = "EasyLog.slnx";
+        // We use stable markers present at repo root.
+        // Some workflows may not have EasyLog.slnx around, but EasySave.slnx is present.
+        var markers = new[] { "EasyLog.slnx", "EasySave.slnx" };
 
         try
         {
@@ -217,9 +213,12 @@ public sealed class CryptoSoftService : ICryptoService
 
             while (dir != null)
             {
-                var markerPath = Path.Combine(dir.FullName, markerFileName);
-                if (File.Exists(markerPath))
-                    return dir.FullName;
+                foreach (var markerFileName in markers)
+                {
+                    var markerPath = Path.Combine(dir.FullName, markerFileName);
+                    if (File.Exists(markerPath))
+                        return dir.FullName;
+                }
 
                 dir = dir.Parent;
             }
