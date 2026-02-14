@@ -55,7 +55,7 @@ namespace EasySave.Factories
             }
 
             // EasyLog: création via la factory
-            var logger = LoggerFactory.CreateLogger(LogFormat.JSON, Path.Combine(target, "logs"));
+            var logger = LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, Path.Combine(target, "logs"));
 
             // Select strategy + inject crypto + logger (needed for JobEventType.Interrupted)
             IBackupStrategy strategy;

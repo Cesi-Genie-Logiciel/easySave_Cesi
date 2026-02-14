@@ -29,7 +29,7 @@ namespace EasySave.Services
             _storageService = storageService;
 
             var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-            _serviceLogger = ProSoft.EasyLog.Implementation.LoggerFactory.CreateLogger(LogFormat.JSON, logDir);
+            _serviceLogger = ProSoft.EasyLog.Implementation.LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, logDir);
 
             LoadJobsFromStorage();
         }
