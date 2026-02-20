@@ -1,4 +1,3 @@
-using System;
 using EasySave.Interfaces;
 using EasySave.Models;
 
@@ -8,17 +7,17 @@ namespace EasySave.Observers
     {
         public void OnBackupStarted(string backupName)
         {
-            Console.WriteLine($"  [Console] Backup '{backupName}' started");
+            Console.WriteLine($"  Sauvegarde '{backupName}' demarree");
         }
-        
+
         public void OnFileTransferred(BackupEventArgs e)
         {
-            Console.WriteLine($"  [Console] Progress: {e.Progress}% ({e.ProcessedFiles}/{e.TotalFiles} files)");
+            Console.WriteLine($"  Progression : {e.Progress}% ({e.ProcessedFiles}/{e.TotalFiles} fichiers)");
         }
-        
+
         public void OnBackupCompleted(string backupName)
         {
-            Console.WriteLine($"  [Console] Backup '{backupName}' completed successfully");
+            Console.WriteLine($"  Sauvegarde '{backupName}' terminee");
         }
     }
 }

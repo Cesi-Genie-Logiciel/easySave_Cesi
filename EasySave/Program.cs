@@ -1,8 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using EasySave.Interfaces;
-using EasySave.Services;
+﻿using EasySave.Interfaces;
 using EasySave.Models;
+using EasySave.Services;
+using System;
+using System.Collections.Generic;
+using System.Net;
 
 namespace EasySave
 {
@@ -11,354 +12,297 @@ namespace EasySave
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            
-            Console.WriteLine("=================================");
-            Console.WriteLine("   EASYSAVE v1.0 - ProSoft");
-            Console.WriteLine("=================================\n");
-            
-            // Initialiser le service de configuration (Feature P2)
+
             ISettingsService settingsService = new SettingsService();
-            Console.WriteLine();
-            
             IBackupService service = new BackupService();
+
+            // Command line mode: EasySave.exe run 1 or EasySave.exe run 1,2,3
+            if (args.Length >= 2 && args[0].ToLower() == "run")
+            {
+                LancerEnLigneDeCommande(service, args[1]);
+                return;
+            }
+
             bool running = true;
-            
             while (running)
             {
-                DisplayMenu();
-                string? choice = Console.ReadLine();
-                
+                AfficherMenu();
+                string? choix = Console.ReadLine();
+
                 try
                 {
-                    switch (choice)
+                    switch (choix)
                     {
-                        case "1":
-                            CreateJob(service);
-                            break;
-                        case "2":
-                            ListJobs(service);
-                            break;
-                        case "3":
-                            ExecuteJob(service);
-                            break;
-                        case "4":
-                            ExecuteMultipleJobs(service);
-                            break;
-                        case "5":
-                            DeleteJob(service);
-                            break;
-                        case "6":
-                            ViewSettings(settingsService);
-                            break;
-                        case "7":
+                        case "1": CreerJob(service); break;
+                        case "2": ListerJobs(service); break;
+                        case "3": ExecuterJob(service); break;
+                        case "4": ExecuterPlusieurs(service); break;
+                        case "5": ModifierJob(service); break;
+                        case "6": SupprimerJob(service); break;
+                        case "7": Parametres(settingsService); break;
+                        case "8":
                             running = false;
-                            Console.WriteLine("\n👋 Goodbye!");
+                            Console.WriteLine("\nA bientot !");
                             break;
                         default:
-                            Console.WriteLine("❌ Invalid choice. Please try again.");
+                            Console.WriteLine("Choix invalide.");
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"\n❌ Error: {ex.Message}");
+                    Console.WriteLine($"\nErreur : {ex.Message}");
                 }
-                
+
                 if (running)
                 {
-                    Console.WriteLine("\nPress Enter to continue...");
+                    Console.WriteLine("\nAppuyez sur Entree...");
                     Console.ReadLine();
                 }
             }
         }
-        
-        static void DisplayMenu()
+
+        static void LancerEnLigneDeCommande(IBackupService service, string nums)
         {
-            try { Console.Clear(); } catch { }
-            Console.WriteLine("\n╔════════════════════════════════════════════════╗");
-            Console.WriteLine("║              MAIN MENU                         ║");
-            Console.WriteLine("╠════════════════════════════════════════════════╣");
-            Console.WriteLine("║  1. Create backup job                          ║");
-            Console.WriteLine("║  2. List all backup jobs                       ║");
-            Console.WriteLine("║  3. Execute a backup job                       ║");
-            Console.WriteLine("║  4. Execute multiple backup jobs               ║");
-            Console.WriteLine("║  5. Delete a backup job                        ║");
-            Console.WriteLine("║  6. View/Edit settings [P2 TEST]               ║");
-            Console.WriteLine("║  7. Quit                                       ║");
-            Console.WriteLine("╚════════════════════════════════════════════════╝");
-            Console.Write("\nYour choice: ");
+            var jobs = service.GetAllBackupJobs();
+            if (jobs.Count == 0)
+            {
+                Console.WriteLine("Aucun job configure.");
+                return;
+            }
+
+            var indices = new List<int>();
+            foreach (var part in nums.Split(','))
+            {
+                if (int.TryParse(part.Trim(), out int n) && n > 0 && n <= jobs.Count)
+                    indices.Add(n - 1);
+            }
+
+            if (indices.Count == 0)
+            {
+                Console.WriteLine("Aucun numero de job valide.");
+                return;
+            }
+
+            service.ExecuteMultipleBackupJobs(indices);
         }
-        
-        static void CreateJob(IBackupService service)
+
+        static void AfficherMenu()
         {
             try { Console.Clear(); } catch { }
-            Console.WriteLine("\n--- CREATE BACKUP JOB ---\n");
-            
-            Console.Write("Job name: ");
+            Console.WriteLine("\n========================================");
+            Console.WriteLine("        EASYSAVE v1.0 - ProSoft");
+            Console.WriteLine("========================================");
+            Console.WriteLine("  1. Creer un job de sauvegarde");
+            Console.WriteLine("  2. Lister les jobs");
+            Console.WriteLine("  3. Executer un job");
+            Console.WriteLine("  4. Executer plusieurs jobs");
+            Console.WriteLine("  5. Modifier un job");
+            Console.WriteLine("  6. Supprimer un job");
+            Console.WriteLine("  7. Parametres");
+            Console.WriteLine("  8. Quitter");
+            Console.WriteLine("========================================");
+            Console.Write("\nVotre choix : ");
+        }
+
+        static void CreerJob(IBackupService service)
+        {
+            Console.WriteLine("\n--- Creer un job ---\n");
+
+            Console.Write("Nom du job : ");
             string? name = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                Console.WriteLine("❌ Name cannot be empty.");
-                return;
-            }
-            
-            Console.Write("Source path: ");
-            string? sourcePath = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(sourcePath))
-            {
-                Console.WriteLine("❌ Source path cannot be empty.");
-                return;
-            }
-            
-            Console.Write("Target path: ");
-            string? targetPath = Console.ReadLine();
-            if (string.IsNullOrWhiteSpace(targetPath))
-            {
-                Console.WriteLine("❌ Target path cannot be empty.");
-                return;
-            }
-            
-            Console.Write("Backup type (1=Complete, 2=Differential): ");
-            string? typeChoice = Console.ReadLine();
-            string backupType = typeChoice == "2" ? "differential" : "complete";
-            
-            service.CreateBackupJob(name, sourcePath, targetPath, backupType);
-            Console.WriteLine($"\n✅ Job '{name}' created successfully!");
+            if (string.IsNullOrWhiteSpace(name)) { Console.WriteLine("Nom vide, annule."); return; }
+
+            Console.Write("Chemin source : ");
+            string? source = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(source)) { Console.WriteLine("Chemin vide, annule."); return; }
+
+            Console.Write("Chemin destination : ");
+            string? target = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(target)) { Console.WriteLine("Chemin vide, annule."); return; }
+
+            Console.Write("Type (1=Complete, 2=Differentielle) : ");
+            string? t = Console.ReadLine();
+            string type = t == "2" ? "differential" : "complete";
+
+            service.CreateBackupJob(name, source, target, type);
+            Console.WriteLine($"\nJob '{name}' cree.");
         }
-        
-        static void ListJobs(IBackupService service)
+
+        static void ListerJobs(IBackupService service)
         {
-            try { Console.Clear(); } catch { }
-            Console.WriteLine("\n--- ALL BACKUP JOBS ---\n");
-            
+            Console.WriteLine("\n--- Liste des jobs ---\n");
+
             var jobs = service.GetAllBackupJobs();
             if (jobs.Count == 0)
             {
-                Console.WriteLine("⚠️  No backup jobs found.");
-                return;
-            }
-            
-            for (int i = 0; i < jobs.Count; i++)
-            {
-                var job = jobs[i];
-                Console.WriteLine($"[{i + 1}] {job.Name}");
-                Console.WriteLine($"    Source: {job.SourcePath}");
-                Console.WriteLine($"    Target: {job.TargetPath}");
-                Console.WriteLine();
-            }
-            
-            Console.WriteLine($"Total: {jobs.Count} job(s)");
-        }
-        
-        static void ExecuteJob(IBackupService service)
-        {
-            try { Console.Clear(); } catch { }
-            Console.WriteLine("\n--- EXECUTE BACKUP JOB ---\n");
-            
-            var jobs = service.GetAllBackupJobs();
-            if (jobs.Count == 0)
-            {
-                Console.WriteLine("⚠️  No jobs to execute.");
-                return;
-            }
-            
-            // Afficher la liste
-            for (int i = 0; i < jobs.Count; i++)
-            {
-                Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
-            }
-            
-            Console.Write("\nJob number to execute: ");
-            if (!int.TryParse(Console.ReadLine(), out int index) || index < 1 || index > jobs.Count)
-            {
-                Console.WriteLine("❌ Invalid number.");
-                return;
-            }
-            
-            Console.WriteLine($"\n▶️  Executing job: {jobs[index - 1].Name}\n");
-            Console.WriteLine("============================================================");
-            
-            // Prefer TryExecuteBackupJob when available (business software detection)
-            if (service is EasySave.Services.BackupService concreteService)
-            {
-                var executed = concreteService.TryExecuteBackupJob(index - 1);
-                Console.WriteLine("============================================================");
-                Console.WriteLine(executed ? "✅ Backup completed!\n" : "⚠️  Backup not started (business software running).\n");
+                Console.WriteLine("Aucun job.");
                 return;
             }
 
-            service.ExecuteBackupJob(index - 1);
-
-            Console.WriteLine("============================================================");
-            Console.WriteLine($"✅ Backup completed!\n");
-        }
-        
-        static void ExecuteMultipleJobs(IBackupService service)
-        {
-            try { Console.Clear(); } catch { }
-            Console.WriteLine("\n--- EXECUTE MULTIPLE BACKUP JOBS ---\n");
-            
-            var jobs = service.GetAllBackupJobs();
-            if (jobs.Count == 0)
-            {
-                Console.WriteLine("⚠️  No jobs to execute.");
-                return;
-            }
-            
-            // Afficher la liste
             for (int i = 0; i < jobs.Count; i++)
             {
-                Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
+                var j = jobs[i];
+                Console.WriteLine($"[{i + 1}] {j.Name} ({j.BackupType})");
+                Console.WriteLine($"    Source : {j.SourcePath}");
+                Console.WriteLine($"    Dest   : {j.TargetPath}\n");
             }
-            
-            Console.Write("\nEnter job numbers separated by commas (e.g., 1,2,3): ");
+        }
+
+        static void ExecuterJob(IBackupService service)
+        {
+            var jobs = service.GetAllBackupJobs();
+            if (jobs.Count == 0) { Console.WriteLine("Aucun job."); return; }
+
+            for (int i = 0; i < jobs.Count; i++)
+                Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
+
+            Console.Write("\nNumero du job : ");
+            if (!int.TryParse(Console.ReadLine(), out int idx) || idx < 1 || idx > jobs.Count)
+            {
+                Console.WriteLine("Numero invalide.");
+                return;
+            }
+
+            service.ExecuteBackupJob(idx - 1);
+        }
+
+        static void ExecuterPlusieurs(IBackupService service)
+        {
+            var jobs = service.GetAllBackupJobs();
+            if (jobs.Count == 0) { Console.WriteLine("Aucun job."); return; }
+
+            for (int i = 0; i < jobs.Count; i++)
+                Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
+
+            Console.Write("\nNumeros separes par des virgules (ex: 1,2,3) : ");
             string? input = Console.ReadLine();
-            
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                Console.WriteLine("❌ No jobs selected.");
-                return;
-            }
-            
+            if (string.IsNullOrWhiteSpace(input)) { Console.WriteLine("Annule."); return; }
+
             var indices = new List<int>();
             foreach (var part in input.Split(','))
             {
-                if (int.TryParse(part.Trim(), out int num) && num > 0 && num <= jobs.Count)
-                {
-                    indices.Add(num - 1);
-                }
+                if (int.TryParse(part.Trim(), out int n) && n > 0 && n <= jobs.Count)
+                    indices.Add(n - 1);
             }
-            
-            if (indices.Count == 0)
-            {
-                Console.WriteLine("❌ No valid jobs selected.");
-                return;
-            }
-            
-            Console.WriteLine($"\n▶️  Executing {indices.Count} job(s)...\n");
-            Console.WriteLine("============================================================");
-            
+
+            if (indices.Count == 0) { Console.WriteLine("Aucun numero valide."); return; }
+
             service.ExecuteMultipleBackupJobs(indices);
-            
-            Console.WriteLine("============================================================");
-            Console.WriteLine($"\n✅ All selected backups completed!\n");
         }
-        
-        static void DeleteJob(IBackupService service)
+
+        static void ModifierJob(IBackupService service)
         {
-            try { Console.Clear(); } catch { }
-            Console.WriteLine("\n--- DELETE BACKUP JOB ---\n");
-            
             var jobs = service.GetAllBackupJobs();
-            if (jobs.Count == 0)
-            {
-                Console.WriteLine("⚠️  No jobs to delete.");
-                return;
-            }
-            
-            // Afficher la liste
+            if (jobs.Count == 0) { Console.WriteLine("Aucun job."); return; }
+
+            Console.WriteLine("\n--- Modifier un job ---\n");
+
             for (int i = 0; i < jobs.Count; i++)
-            {
                 Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
-            }
-            
-            Console.Write("\nJob number to delete: ");
-            if (!int.TryParse(Console.ReadLine(), out int index) || index < 1 || index > jobs.Count)
+
+            Console.Write("\nNumero du job a modifier : ");
+            if (!int.TryParse(Console.ReadLine(), out int idx) || idx < 1 || idx > jobs.Count)
             {
-                Console.WriteLine("❌ Invalid number.");
+                Console.WriteLine("Numero invalide.");
                 return;
             }
-            
-            var jobName = jobs[index - 1].Name;
-            Console.Write($"\n⚠️  Are you sure you want to delete '{jobName}'? (y/n): ");
-            string? confirm = Console.ReadLine();
-            
-            if (confirm?.ToLower() != "y")
-            {
-                Console.WriteLine("\n⚠️  Deletion cancelled.");
-                return;
-            }
-            
-            service.DeleteBackupJob(index - 1);
-            Console.WriteLine($"\n✅ Job '{jobName}' deleted successfully!");
+
+            var old = jobs[idx - 1];
+            Console.WriteLine($"\nJob actuel : {old.Name}");
+            Console.WriteLine($"  Source : {old.SourcePath}");
+            Console.WriteLine($"  Dest   : {old.TargetPath}");
+            Console.WriteLine($"  Type   : {old.BackupType}\n");
+
+            Console.Write($"Nouveau nom (Entree = garder '{old.Name}') : ");
+            string? name = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(name)) name = old.Name;
+
+            Console.Write($"Nouveau chemin source (Entree = garder) : ");
+            string? source = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(source)) source = old.SourcePath;
+
+            Console.Write($"Nouveau chemin destination (Entree = garder) : ");
+            string? target = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(target)) target = old.TargetPath;
+
+            Console.Write($"Type (1=Complete, 2=Differentielle, Entree = garder) : ");
+            string? t = Console.ReadLine();
+            string type = old.BackupType;
+            if (t == "1") type = "complete";
+            else if (t == "2") type = "differential";
+
+            service.UpdateBackupJob(idx - 1, name, source, target, type);
         }
-        
-        static void ViewSettings(ISettingsService settingsService)
+
+        static void SupprimerJob(IBackupService service)
         {
-            try { Console.Clear(); } catch { }
-            Console.WriteLine("\n--- APPLICATION SETTINGS (P2 Feature Test) ---\n");
-            
+            var jobs = service.GetAllBackupJobs();
+            if (jobs.Count == 0) { Console.WriteLine("Aucun job."); return; }
+
+            for (int i = 0; i < jobs.Count; i++)
+                Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
+
+            Console.Write("\nNumero du job a supprimer : ");
+            if (!int.TryParse(Console.ReadLine(), out int idx) || idx < 1 || idx > jobs.Count)
+            {
+                Console.WriteLine("Numero invalide.");
+                return;
+            }
+
+            Console.Write($"Supprimer '{jobs[idx - 1].Name}' ? (o/n) : ");
+            if (Console.ReadLine()?.ToLower() != "o")
+            {
+                Console.WriteLine("Annule.");
+                return;
+            }
+
+            service.DeleteBackupJob(idx - 1);
+        }
+
+        static void Parametres(ISettingsService settingsService)
+        {
             var settings = settingsService.GetCurrent();
-            
-            Console.WriteLine("Current Settings:");
-            Console.WriteLine($"  Log Format: {settings.LogFormat}");
-            Console.WriteLine($"  Extensions to Encrypt: {string.Join(", ", settings.ExtensionsToEncrypt)}");
-            Console.WriteLine($"  Business Software: {(string.IsNullOrEmpty(settings.BusinessSoftwareName) ? "None" : settings.BusinessSoftwareName)}");
-            
-            Console.WriteLine("\n\nOptions:");
-            Console.WriteLine("  1. Change Log Format (JSON/XML)");
-            Console.WriteLine("  2. Add Extension to Encrypt");
-            Console.WriteLine("  3. Set Business Software Name");
-            Console.WriteLine("  4. Reload Settings from File");
-            Console.WriteLine("  5. Save Current Settings");
-            Console.WriteLine("  6. Back to Main Menu");
-            
-            Console.Write("\nYour choice: ");
-            string? choice = Console.ReadLine();
-            
-            switch (choice)
+
+            Console.WriteLine("\n--- Parametres ---\n");
+            Console.WriteLine($"  Format de log    : {settings.LogFormat}");
+            Console.WriteLine($"  Extensions       : {string.Join(", ", settings.ExtensionsToEncrypt)}");
+            Console.WriteLine($"  Logiciel metier  : {(string.IsNullOrEmpty(settings.BusinessSoftwareName) ? "Aucun" : settings.BusinessSoftwareName)}");
+
+            Console.WriteLine("\n  1. Changer le format de log");
+            Console.WriteLine("  2. Ajouter une extension a chiffrer");
+            Console.WriteLine("  3. Definir le logiciel metier");
+            Console.WriteLine("  4. Sauvegarder");
+            Console.WriteLine("  5. Retour");
+
+            Console.Write("\nChoix : ");
+            string? choix = Console.ReadLine();
+
+            switch (choix)
             {
                 case "1":
-                    Console.Write("\nNew format (JSON/XML): ");
-                    string? format = Console.ReadLine();
-                    if (format?.ToUpper() == "JSON")
-                        settings.LogFormat = LogFormat.JSON;
-                    else if (format?.ToUpper() == "XML")
-                        settings.LogFormat = LogFormat.XML;
-                    else
-                        Console.WriteLine("❌ Invalid format. Must be JSON or XML.");
+                    Console.Write("Format (JSON/XML) : ");
+                    string? fmt = Console.ReadLine()?.ToUpper();
+                    if (fmt == "JSON") settings.LogFormat = LogFormat.JSON;
+                    else if (fmt == "XML") settings.LogFormat = LogFormat.XML;
+                    else Console.WriteLine("Format invalide.");
                     break;
-                    
                 case "2":
-                    Console.Write("\nExtension to add (e.g., .doc): ");
+                    Console.Write("Extension (ex: .doc) : ");
                     string? ext = Console.ReadLine();
-                    if (!string.IsNullOrWhiteSpace(ext))
-                    {
-                        if (!settings.ExtensionsToEncrypt.Contains(ext))
-                        {
-                            settings.ExtensionsToEncrypt.Add(ext);
-                            Console.WriteLine($"✅ Extension '{ext}' added.");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"⚠️  Extension '{ext}' already in list.");
-                        }
-                    }
+                    if (!string.IsNullOrWhiteSpace(ext) && !settings.ExtensionsToEncrypt.Contains(ext))
+                        settings.ExtensionsToEncrypt.Add(ext);
                     break;
-                    
                 case "3":
-                    Console.Write("\nBusiness Software Name: ");
-                    string? softwareName = Console.ReadLine();
-                    settings.BusinessSoftwareName = softwareName ?? "";
-                    Console.WriteLine("✅ Business Software Name updated.");
+                    Console.Write("Nom du processus : ");
+                    settings.BusinessSoftwareName = Console.ReadLine() ?? "";
                     break;
-                    
                 case "4":
-                    settingsService.Reload();
-                    Console.WriteLine("\n✅ Settings reloaded from file.");
-                    break;
-                    
-                case "5":
                     settingsService.Save(settings);
-                    Console.WriteLine("\n✅ Settings saved to file.");
+                    Console.WriteLine("Parametres sauvegardes.");
                     break;
-                    
-                case "6":
+                case "5":
                     return;
-                    
-                default:
-                    Console.WriteLine("❌ Invalid choice.");
-                    break;
             }
         }
     }

@@ -4,7 +4,6 @@ using System.Linq;
 using EasySave.Models;
 using EasySave.Factories;
 using EasySave.Interfaces;
-using ProSoft.EasyLog;
 using ProSoft.EasyLog.Interfaces;
 
 namespace EasySave.Services
@@ -12,224 +11,111 @@ namespace EasySave.Services
     public class BackupService : IBackupService
     {
         private readonly List<BackupJob> _jobs = new List<BackupJob>();
+        private readonly IJobStorageService _storage;
+        private readonly BusinessSoftwareMonitor _monitor = new BusinessSoftwareMonitor();
+        private readonly ILogger _logger;
 
-        // P2 (GUI): stockage persistant
-        private readonly IJobStorageService _storageService;
-
-        // P4: détection logiciel métier + log job event
-        private readonly BusinessSoftwareMonitor _businessSoftwareMonitor = new BusinessSoftwareMonitor();
-        private readonly ILogger _serviceLogger;
-
-        /// <summary>
-        /// Constructeur avec injection du service de stockage.
-        /// Charge automatiquement les jobs sauvegardés.
-        /// </summary>
-        public BackupService(IJobStorageService storageService)
+        public BackupService(IJobStorageService storage)
         {
-            _storageService = storageService;
-
+            _storage = storage;
             var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-            _serviceLogger = ProSoft.EasyLog.Implementation.LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, logDir);
-
-            LoadJobsFromStorage();
+            _logger = ProSoft.EasyLog.Implementation.LoggerFactory.CreateLogger(
+                ProSoft.EasyLog.LogFormat.JSON, logDir);
+            ChargerJobs();
         }
 
-        /// <summary>
-        /// Constructeur par défaut (rétrocompatibilité)
-        /// Crée un service de stockage par défaut.
-        /// </summary>
-        public BackupService() : this(new JobStorageService())
-        {
-        }
+        public BackupService() : this(new JobStorageService()) { }
 
-        /// <summary>
-        /// Charge les jobs depuis le stockage persistant.
-        /// </summary>
-        private void LoadJobsFromStorage()
+        private void ChargerJobs()
         {
             try
             {
-                var configs = _storageService.LoadJobs();
-                foreach (var config in configs)
+                foreach (var config in _storage.LoadJobs())
                 {
                     try
                     {
-                        var job = BackupJobFactory.CreateBackupJob(
-                            config.Name,
-                            config.SourcePath,
-                            config.TargetPath,
-                            config.BackupType);
-                        _jobs.Add(job);
+                        _jobs.Add(BackupJobFactory.CreateBackupJob(
+                            config.Name, config.SourcePath, config.TargetPath, config.BackupType));
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"⚠️  Failed to load job '{config.Name}': {ex.Message}");
+                        Console.WriteLine($"Impossible de charger le job '{config.Name}' : {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error loading jobs from storage: {ex.Message}");
+                Console.WriteLine($"Erreur au chargement des jobs : {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Sauvegarde tous les jobs dans le stockage persistant.
-        /// </summary>
-        private void SaveJobsToStorage()
+        private void SauvegarderJobs()
         {
             try
             {
-                var configs = _jobs.Select(job => new BackupConfig(
-                    job.Name,
-                    job.SourcePath,
-                    job.TargetPath,
-                    GetBackupType(job)
-                )).ToList();
-
-                _storageService.SaveJobs(configs);
+                var configs = _jobs.Select(j => new BackupConfig(
+                    j.Name, j.SourcePath, j.TargetPath, j.BackupType)).ToList();
+                _storage.SaveJobs(configs);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error saving jobs to storage: {ex.Message}");
+                Console.WriteLine($"Erreur a la sauvegarde : {ex.Message}");
             }
         }
-
-        /// <summary>
-        /// Récupère le type de backup d'un job (helper method)
-        /// Note: Pour v2.0, cette info devrait être exposée dans BackupJob.
-        /// </summary>
-        private string GetBackupType(BackupJob job)
-        {
-            // TODO v2.0: Ajouter une propriété BackupType dans BackupJob
-            return "complete";
-        }
-
-        // ✅ FEATURE P2: Events pour notifier la GUI (v2.0)
-        public event EventHandler<BackupJob>? JobCreated;
-        public event EventHandler<BackupJob>? JobDeleted;
-        public event EventHandler<BackupJob>? JobUpdated;
 
         public void CreateBackupJob(string name, string source, string target, string type)
         {
-            // ✅ FEATURE P2: Limite de 5 jobs supprimée - stockage illimité
             var job = BackupJobFactory.CreateBackupJob(name, source, target, type);
             _jobs.Add(job);
-            Console.WriteLine($"Backup job '{name}' created successfully");
-
-            SaveJobsToStorage();
-            JobCreated?.Invoke(this, job);
+            SauvegarderJobs();
         }
 
-        public List<BackupJob> GetAllBackupJobs()
-        {
-            return new List<BackupJob>(_jobs);
-        }
+        public List<BackupJob> GetAllBackupJobs() => new List<BackupJob>(_jobs);
 
         public void ExecuteBackupJob(int index)
         {
-            TryExecuteBackupJob(index);
-        }
-
-        public bool TryExecuteBackupJob(int index)
-        {
             if (index < 0 || index >= _jobs.Count)
+                throw new ArgumentOutOfRangeException($"Index invalide : {index}");
+
+            if (_monitor.IsRunning())
             {
-                throw new ArgumentOutOfRangeException($"Invalid job index: {index}");
-            }
-
-            // P4: Interdire de démarrer si logiciel métier détecté
-            if (_businessSoftwareMonitor.IsRunning())
-            {
-                var jobName = _jobs[index].Name;
-                var process = _businessSoftwareMonitor.ProcessName ?? string.Empty;
-
-                Console.WriteLine($"\n[BusinessSoftware] Job '{jobName}' not started: business software is running.");
-                _serviceLogger.LogJobEvent(jobName, ProSoft.EasyLog.Models.JobEventType.Refused, "Business software running", process);
-
-                return false;
+                var name = _jobs[index].Name;
+                Console.WriteLine($"\nJob '{name}' refuse : logiciel metier en cours d'execution.");
+                _logger.LogJobEvent(name, ProSoft.EasyLog.Models.JobEventType.Refused,
+                    "Logiciel metier detecte", _monitor.ProcessName);
+                return;
             }
 
             _jobs[index].Execute();
-            return true;
         }
 
         public void ExecuteMultipleBackupJobs(List<int> indices)
         {
             foreach (var index in indices)
-            {
                 ExecuteBackupJob(index);
-            }
         }
 
         public void DeleteBackupJob(int index)
         {
             if (index < 0 || index >= _jobs.Count)
-            {
-                throw new ArgumentOutOfRangeException($"Invalid job index: {index}");
-            }
+                throw new ArgumentOutOfRangeException($"Index invalide : {index}");
 
-            var job = _jobs[index];
-            var jobName = job.Name;
+            var name = _jobs[index].Name;
             _jobs.RemoveAt(index);
-            Console.WriteLine($"Backup job '{jobName}' deleted");
-
-            SaveJobsToStorage();
-            JobDeleted?.Invoke(this, job);
-        }
-
-        // ✅ FEATURE P2: Nouvelles méthodes pour GUI/MVVM (v2.0)
-        public BackupJob? GetJobByIndex(int index)
-        {
-            if (index < 0 || index >= _jobs.Count)
-            {
-                return null;
-            }
-            return _jobs[index];
-        }
-
-        public BackupJob? GetJobByName(string name)
-        {
-            return _jobs.FirstOrDefault(j => j.Name == name);
+            Console.WriteLine($"Job '{name}' supprime.");
+            SauvegarderJobs();
         }
 
         public void UpdateBackupJob(int index, string name, string source, string target, string type)
         {
             if (index < 0 || index >= _jobs.Count)
-            {
-                throw new ArgumentOutOfRangeException($"Invalid job index: {index}");
-            }
+                throw new ArgumentOutOfRangeException($"Index invalide : {index}");
 
-            var oldJob = _jobs[index];
             _jobs.RemoveAt(index);
-
             var newJob = BackupJobFactory.CreateBackupJob(name, source, target, type);
             _jobs.Insert(index, newJob);
-
-            Console.WriteLine($"Backup job updated: '{oldJob.Name}' -> '{name}'");
-
-            SaveJobsToStorage();
-            JobUpdated?.Invoke(this, newJob);
-        }
-
-        public void PauseBackupJob(BackupJob job)
-        {
-            if (job == null)
-            {
-                throw new ArgumentNullException(nameof(job));
-            }
-
-            job.Pause();
-        }
-
-        public void StopBackupJob(BackupJob job)
-        {
-            if (job == null)
-            {
-                throw new ArgumentNullException(nameof(job));
-            }
-
-            job.Stop();
+            Console.WriteLine($"Job mis a jour : '{name}'");
+            SauvegarderJobs();
         }
     }
 }

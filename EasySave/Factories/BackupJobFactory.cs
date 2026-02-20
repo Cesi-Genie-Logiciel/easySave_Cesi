@@ -12,113 +12,55 @@ using ProSoft.EasyLog.Implementation;
 
 namespace EasySave.Factories
 {
-    /// <summary>
-    /// Factory for creating BackupJob instances with proper configuration.
-    /// Handles strategy selection, crypto service integration, and observer setup.
-    /// </summary>
     public class BackupJobFactory
     {
-        /// <summary>
-        /// Creates a configured BackupJob instance with all dependencies.
-        /// </summary>
-        /// <param name="name">Unique backup job name</param>
-        /// <param name="source">Source directory path</param>
-        /// <param name="target">Target directory path</param>
-        /// <param name="type">Backup type: "complete" or "differential"</param>
-        /// <returns>Fully configured BackupJob ready for execution</returns>
         public static BackupJob CreateBackupJob(string name, string source, string target, string type)
         {
-            // Validate input parameters
             if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Backup name cannot be empty");
+                throw new ArgumentException("Le nom ne peut pas etre vide");
             if (!Directory.Exists(source))
-                throw new DirectoryNotFoundException($"Source not found: {source}");
+                throw new DirectoryNotFoundException($"Dossier source introuvable : {source}");
 
-            // CryptoSoft integration: try to wire the external tool if present
-            // If not present, strategies still work normally without encryption
+            // Cruptographic service (optional)
             ICryptoService? cryptoService = null;
-            string? cryptoPath = null;
             try
             {
-                var overridePath = Environment.GetEnvironmentVariable("EASY_SAVE_CRYPTOSOFT_PATH");
-                cryptoPath = !string.IsNullOrWhiteSpace(overridePath)
-                    ? overridePath
-                    : CryptoSoftService.TryGetDefaultCryptoSoftPath();
+                var path = Environment.GetEnvironmentVariable("EASY_SAVE_CRYPTOSOFT_PATH")
+                           ?? CryptoSoftService.TryGetDefaultCryptoSoftPath();
 
-                // Fallback candidates (cross-platform, includes RID folders like linux-x64)
-                if (string.IsNullOrWhiteSpace(cryptoPath) || !File.Exists(cryptoPath))
+                if (!string.IsNullOrWhiteSpace(path))
                 {
-                    cryptoPath = CryptoSoftService.GetDefaultCryptoSoftCandidatesForDebug()
-                        .FirstOrDefault(File.Exists);
-                }
-
-                if (!string.IsNullOrWhiteSpace(cryptoPath))
-                {
-                    var service = new CryptoSoftService(cryptoPath);
-                    if (service.IsAvailable())
-                    {
-                        cryptoService = service;
-                        // CryptoSoft found and wired.
-                    }
+                    var svc = new CryptoSoftService(path);
+                    if (svc.IsAvailable())
+                        cryptoService = svc;
                 }
             }
-            catch
-            {
-                // Keep crypto optional - continue without it if unavailable
-            }
+            catch { }
 
-            if (cryptoService == null)
-            {
-                // Minimal diagnostic to avoid silent 'EncryptionTime=0' when CryptoSoft isn't even found.
-                Console.WriteLine("[CryptoSoft] Not available. Set EASY_SAVE_CRYPTOSOFT_PATH to the CryptoSoft executable/DLL.");
-                if (!string.IsNullOrWhiteSpace(cryptoPath))
-                    Console.WriteLine($"[CryptoSoft] Last candidate checked: {cryptoPath}");
-            }
+            // Logger
+            var logger = LoggerFactory.CreateLogger(
+                ProSoft.EasyLog.LogFormat.JSON,
+                Path.Combine(target, "logs"));
 
-            // EasyLog: création via la factory
-            var logger = LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, Path.Combine(target, "logs"));
-
-            // Load extensions to encrypt from appsettings.json
-            List<string> extensionsToEncrypt = new List<string>();
+            // extensions to encrypt from settings
+            var extensions = new List<string>();
             try
             {
-                var settingsService = new SettingsService();
-                var settings = settingsService.GetCurrent();
-                extensionsToEncrypt = settings.ExtensionsToEncrypt ?? new List<string>();
-                
-                if (extensionsToEncrypt.Count > 0)
-                {
-                    Console.WriteLine($"[CryptoSoft] Extensions to encrypt: {string.Join(", ", extensionsToEncrypt)}");
-                }
-                else
-                {
-                    Console.WriteLine("[CryptoSoft] No extensions configured for encryption");
-                }
+                var settings = new SettingsService().GetCurrent();
+                extensions = settings.ExtensionsToEncrypt ?? new List<string>();
             }
-            catch (Exception ex)
+            catch { }
+
+            // choice of strategy
+            IBackupStrategy strategy = type.ToLower() switch
             {
-                Console.WriteLine($"[CryptoSoft] Error loading settings: {ex.Message}");
-                // If settings cannot be loaded, default to empty list (no encryption)
-            }
+                "complete" => new CompleteBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensions),
+                "differential" => new DifferentialBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensions),
+                _ => throw new ArgumentException($"Type de sauvegarde inconnu : {type}")
+            };
 
-            // Select strategy + inject crypto + logger (needed for JobEventType.Interrupted)
-            IBackupStrategy strategy;
-            switch (type.ToLower())
-            {
-                case "complete":
-                    strategy = new CompleteBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensionsToEncrypt);
-                    break;
-                case "differential":
-                    strategy = new DifferentialBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensionsToEncrypt);
-                    break;
-                default:
-                    throw new ArgumentException($"Unknown backup type: {type}");
-            }
+            var job = new BackupJob(name, source, target, type, strategy);
 
-            // Create the backup job with selected strategy
-            var job = new BackupJob(name, source, target, strategy);
-
-            // Attach observers for monitoring and logging
             job.AddObserver(new ConsoleObserver());
             job.AddObserver(new LoggerObserver(logger));
             job.AddObserver(new StateObserver(logger));

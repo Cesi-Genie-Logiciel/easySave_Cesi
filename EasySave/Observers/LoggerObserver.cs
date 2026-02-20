@@ -1,5 +1,4 @@
 ﻿using ProSoft.EasyLog.Interfaces;
-using ProSoft.EasyLog;
 using EasySave.Interfaces;
 using EasySave.Models;
 
@@ -14,39 +13,19 @@ namespace EasySave.Observers
             _logger = logger;
         }
 
-        public void OnBackupStarted(string backupName)
-        {
-            // Optionnel : logger le début
-        }
+        public void OnBackupStarted(string backupName) { }
 
         public void OnFileTransferred(BackupEventArgs e)
         {
-            // v2.0: log transfer time + encryption time
-            try
-            {
-                _logger.LogFileTransfer(
-                    e.BackupName,
-                    e.SourceFile,
-                    e.DestFile,
-                    e.FileSize,
-                    Convert.ToInt64(e.TransferTimeMs),
-                    e.EncryptionTimeMs);
-            }
-            catch
-            {
-                // Fallback (v1): log without encryption time.
-                _logger.LogFileTransfer(
-                    e.BackupName,
-                    e.SourceFile,
-                    e.DestFile,
-                    e.FileSize,
-                    Convert.ToInt64(e.TransferTimeMs));
-            }
+            _logger.LogFileTransfer(
+                e.BackupName,
+                e.SourceFile,
+                e.DestFile,
+                e.FileSize,
+                Convert.ToInt64(e.TransferTimeMs),
+                e.EncryptionTimeMs);
         }
 
-        public void OnBackupCompleted(string backupName)
-        {
-            // Optionnel : logger la fin
-        }
+        public void OnBackupCompleted(string backupName) { }
     }
 }
