@@ -1,0 +1,598 @@
+classDiagram
+    direction TB
+
+    %% ============================================
+    %% EASYSAVE - Point d'entree
+    %% ============================================
+    class Program {
+        +Main(args: string[]) void
+    }
+
+    %% ============================================
+    %% EasySave_Views
+    %% ============================================
+    namespace EasySave_Views {
+        class MainWindow {
+            +DataContext: MainViewModel
+        }
+    }
+
+    %% ============================================
+    %% EasySave_ViewModels
+    %% ============================================
+    namespace EasySave_ViewModels {
+        class BaseViewModel {
+            <<abstract>>
+            +event PropertyChangedEventHandler PropertyChanged
+            #SetProperty(field, value) bool
+            #OnPropertyChanged(name) void
+        }
+
+        class MainViewModel {
+            -_backupService: IBackupService
+            -_selectedBackupJob: BackupJobViewModel
+            -_statusText: string
+            -_globalProgress: double
+            +BackupJobs: ObservableCollection~BackupJobViewModel~
+            +SelectedBackupJob: BackupJobViewModel
+            +StatusText: string
+            +GlobalProgress: double
+            +CreateBackupCommand: ICommand
+            +ExecuteBackupCommand: ICommand
+            +DeleteBackupCommand: ICommand
+            +ExecuteAllCommand: ICommand
+            +PauseAllCommand: ICommand
+            +ResumeAllCommand: ICommand
+            +StopAllCommand: ICommand
+            +RefreshCommand: ICommand
+            -LoadJobs() void
+            -CreateBackupJob(param) void
+            -ExecuteBackup(param) void
+            -DeleteBackup(param) void
+            -ExecuteAll(param) void
+            -PauseAll(param) void
+            -ResumeAll(param) void
+            -StopAll(param) void
+        }
+
+        class BackupJobViewModel {
+            +Name: string
+            +SourcePath: string
+            +TargetPath: string
+            +BackupType: string
+            +State: BackupJobState
+            +Progress: int
+            +IsRunning: bool
+            +IsPaused: bool
+            +PlayCommand: ICommand
+            +PauseCommand: ICommand
+            +StopCommand: ICommand
+            +UpdateFromModel(job) void
+        }
+    }
+
+    %% ============================================
+    %% EasySave_Commands
+    %% ============================================
+    namespace EasySave_Commands {
+        class RelayCommand {
+            -Action~Object~ execute
+            -Predicate~Object~ canExecute
+            +event EventHandler CanExecuteChanged
+            +CanExecute(param) bool
+            +Execute(param) void
+        }
+
+        class AppSettingsStatement {
+            +Font: string
+            +FontSize: int
+            +Foreground: Brush
+            +IsDarkMode: bool
+            +CurrentLang: string
+        }
+    }
+
+    %% ============================================
+    %% EasySave_Services_Interfaces
+    %% ============================================
+    namespace EasySave_Services_Interfaces {
+        class IBackupService {
+            <<interface>>
+            +CreateBackupJob(name, source, target, type) void
+            +GetAllBackupJobs() List~BackupJob~
+            +ExecuteBackupJob(index) void
+            +ExecuteMultipleBackupJobs(indices) void
+            +ExecuteAllBackupJobsParallel() void
+            +PauseBackupJob(index) void
+            +ResumeBackupJob(index) void
+            +StopBackupJob(index) void
+            +PauseAllBackupJobs() void
+            +ResumeAllBackupJobs() void
+            +StopAllBackupJobs() void
+            +UpdateBackupJob(index, name, source, target, type) void
+            +DeleteBackupJob(index) void
+        }
+
+        class IBusinessSoftwareDetector {
+            <<interface>>
+            +BusinessSoftwareName: string
+            +IsBusinessSoftwareRunning() bool
+            +StartMonitoring() void
+            +StopMonitoring() void
+            +event Action~bool~ BusinessSoftwareStateChanged
+        }
+    }
+
+    %% ============================================
+    %% EasySave_Services_Implementations
+    %% ============================================
+    namespace EasySave_Services_Implementations {
+        class BackupService {
+            -_jobs: List~BackupJob~
+            -_storage: IJobStorageService
+            -_coordinator: ParallelBackupCoordinator
+            -_logger: ILogger
+            +CreateBackupJob(name, source, target, type) void
+            +GetAllBackupJobs() List~BackupJob~
+            +ExecuteBackupJob(index) void
+            +ExecuteMultipleBackupJobs(indices) void
+            +ExecuteAllBackupJobsParallel() void
+            +PauseBackupJob(index) void
+            +ResumeBackupJob(index) void
+            +StopBackupJob(index) void
+            +PauseAllBackupJobs() void
+            +ResumeAllBackupJobs() void
+            +StopAllBackupJobs() void
+            +UpdateBackupJob(index, name, source, target, type) void
+            +DeleteBackupJob(index) void
+            -LoadJobs() void
+            -SaveJobs() void
+        }
+
+        class BusinessSoftwareDetector {
+            -_processName: string
+            -_pollingIntervalMs: int
+            -_cancellationTokenSource: CancellationTokenSource
+            +BusinessSoftwareName: string
+            +IsBusinessSoftwareRunning() bool
+            +StartMonitoring() void
+            +StopMonitoring() void
+            +event Action~bool~ BusinessSoftwareStateChanged
+        }
+
+        class CryptoSoftService {
+            -_cryptoSoftExecutablePath: string
+            -_mutex: Mutex
+            +IsAvailable() bool
+            +EncryptInPlace(filePath, key) int
+            +EncryptInPlaceWithDurationMs(filePath, key) long
+            -AcquireMutex() bool
+            -ReleaseMutex() void
+        }
+    }
+
+    %% ============================================
+    %% EasySave_Core_Coordination
+    %% ============================================
+    namespace EasySave_Core_Coordination {
+        class ParallelBackupCoordinator {
+            -_priorityManager: PriorityFileManager
+            -_bandwidthGuard: LargeFileTransferGuard
+            -_businessDetector: IBusinessSoftwareDetector
+            -_runningTasks: Dictionary~BackupJob, Task~
+            +ExecuteJobsInParallel(jobs: List~BackupJob~) Task
+            +PauseJob(job: BackupJob) void
+            +ResumeJob(job: BackupJob) void
+            +StopJob(job: BackupJob) void
+            +PauseAll() void
+            +ResumeAll() void
+            +StopAll() void
+            -OnBusinessSoftwareStateChanged(isRunning: bool) void
+        }
+
+        class PriorityFileManager {
+            -_priorityExtensions: List~string~
+            -_pendingPriorityCount: int
+            -_priorityLock: object
+            +HasPendingPriorityFiles() bool
+            +IsPriorityExtension(filePath: string) bool
+            +IncrementPendingPriority() void
+            +DecrementPendingPriority() void
+            +CanTransferNonPriority() bool
+            +WaitForPriorityCompletion() void
+        }
+
+        class LargeFileTransferGuard {
+            -_semaphore: SemaphoreSlim
+            -_thresholdKo: long
+            +ThresholdKo: long
+            +IsLargeFile(fileSize: long) bool
+            +AcquireIfLargeFile(fileSize: long) Task
+            +Release(fileSize: long) void
+        }
+    }
+
+    %% ============================================
+    %% EasySave_Core_Factory
+    %% ============================================
+    namespace EasySave_Core_Factory {
+        class BackupJobFactory {
+            <<factory>>
+            +ICryptoService cryptoService
+            +CreateBackupJob(name, source, target, type, fileExtension)$ BackupJob
+        }
+    }
+
+    %% ============================================
+    %% EasySave_Core_Models
+    %% ============================================
+    namespace EasySave_Core_Models {
+        class BackupJob {
+            -string name
+            -string sourcePath
+            -string targetPath
+            -string backupType
+            -IBackupStrategy strategy
+            -BackupJobState _state
+            -CancellationTokenSource _cts
+            -ManualResetEventSlim _pauseEvent
+            +Name: string
+            +SourcePath: string
+            +TargetPath: string
+            +BackupType: string
+            +State: BackupJobState
+            +Progress: int
+            +Execute(token: CancellationToken) Task
+            +Pause() void
+            +Resume() void
+            +Stop() void
+            +AddObserver(observer: IBackupObserver) void
+            +RemoveObserver(observer: IBackupObserver) void
+            -NotifyObservers(args: BackupEventArgs) void
+            -CheckPauseRequested() void
+        }
+
+        class BackupJobState {
+            <<enumeration>>
+            Pending
+            Running
+            Paused
+            Stopped
+            Completed
+            Error
+        }
+
+        class BackupConfig {
+            +string name
+            +string sourcePath
+            +string targetPath
+            +string backupType
+        }
+
+        class BackupState {
+            +string name
+            +DateTime timestamp
+            +string state
+            +int totalFiles
+            +int filesRemaining
+            +long totalSize
+            +long sizeRemaining
+            +string currentSourceFile
+            +string currentDestFile
+            +int progress
+        }
+
+        class BackupEventArgs {
+            +string backupName
+            +string sourceFile
+            +string destFile
+            +long fileSize
+            +double transferTimeMs
+            +long encryptionTimeMs
+            +int totalFiles
+            +int processedFiles
+            +int progress
+        }
+
+        class AppSettings {
+            +LogFormat logFormat
+            +List~string~ extensionsToEncrypt
+            +List~string~ priorityExtensions
+            +long largeFileThresholdKo
+            +string businessSoftwareName
+            +LogDestination logDestination
+            +string dockerLogServerUrl
+        }
+    }
+
+    %% ============================================
+    %% EasySave_Core_Strategies
+    %% ============================================
+    namespace EasySave_Core_Strategies {
+        class IBackupStrategy {
+            <<interface>>
+            +ExecuteBackup(sourcePath, targetPath, cryptoExtension, token: CancellationToken, pauseEvent: ManualResetEventSlim) Task
+        }
+
+        class CompleteBackupStrategy {
+            -_priorityManager: PriorityFileManager
+            -_bandwidthGuard: LargeFileTransferGuard
+            +ExecuteBackup(sourcePath, targetPath, cryptoExtension, token: CancellationToken, pauseEvent: ManualResetEventSlim) Task
+        }
+
+        class DifferentialBackupStrategy {
+            -_priorityManager: PriorityFileManager
+            -_bandwidthGuard: LargeFileTransferGuard
+            +ExecuteBackup(sourcePath, targetPath, cryptoExtension, token: CancellationToken, pauseEvent: ManualResetEventSlim) Task
+        }
+    }
+
+    %% ============================================
+    %% EasySave_Core_Observers
+    %% ============================================
+    namespace EasySave_Core_Observers {
+        class IBackupObserver {
+            <<interface>>
+            +OnBackupStarted(backupName) void
+            +OnFileTransferred(args: BackupEventArgs) void
+            +OnBackupCompleted(backupName) void
+            +OnBackupStateChanged(backupName, state: BackupJobState) void
+        }
+
+        class ConsoleObserver {
+            +OnBackupStarted(backupName) void
+            +OnFileTransferred(args: BackupEventArgs) void
+            +OnBackupCompleted(backupName) void
+            +OnBackupStateChanged(backupName, state: BackupJobState) void
+        }
+
+        class LoggerObserver {
+            -_logger: ILogger
+            +OnBackupStarted(backupName) void
+            +OnFileTransferred(args: BackupEventArgs) void
+            +OnBackupCompleted(backupName) void
+            +OnBackupStateChanged(backupName, state: BackupJobState) void
+        }
+
+        class StateObserver {
+            -_logger: ILogger
+            +OnBackupStarted(backupName) void
+            +OnFileTransferred(args: BackupEventArgs) void
+            +OnBackupCompleted(backupName) void
+            +OnBackupStateChanged(backupName, state: BackupJobState) void
+        }
+    }
+
+    %% ============================================
+    %% EasyLog_Interfaces
+    %% ============================================
+    namespace EasyLog_Interfaces {
+        class ILogger {
+            <<interface>>
+            +LogFileTransfer(jobName, sourceFile, destFile, fileSize, durationMs, encryptionTimeMs) void
+            +UpdateStateToDisk() void
+        }
+
+        class ILogFormatter {
+            <<interface>>
+            +FileExtension: string
+            +FormatLogEntry(entry: LogEntry) string
+        }
+
+        class ILogTransport {
+            <<interface>>
+            +SendLog(entry: LogEntry) Task
+            +IsAvailable() bool
+        }
+    }
+
+    %% ============================================
+    %% EasyLog_Implementation
+    %% ============================================
+    namespace EasyLog_Implementation {
+        class LoggerFactory {
+            <<factory>>
+            +Create(format: LogFormat, destination: LogDestination, serverUrl: string)$ ILogger
+        }
+
+        class Logger {
+            -_formatter: ILogFormatter
+            -_transport: ILogTransport
+            -_lock: object
+            +LogFileTransfer(jobName, sourceFile, destFile, fileSize, durationMs, encryptionTimeMs) void
+            +UpdateStateToDisk() void
+            -SendToTransport(entry: LogEntry) void
+        }
+    }
+
+    %% ============================================
+    %% EasyLog_Models
+    %% ============================================
+    namespace EasyLog_Models {
+        class LogFormat {
+            <<enumeration>>
+            JSON
+            XML
+        }
+
+        class LogDestination {
+            <<enumeration>>
+            Local
+            Centralized
+            Both
+        }
+
+        class LogEntry {
+            +DateTime timestamp
+            +string jobName
+            +string sourcePath
+            +string destPath
+            +long fileSize
+            +long transferTimeMs
+            +long encryptionTimeMs
+            +string machineName
+            +string userName
+        }
+
+        class JsonLogFormatter {
+            +FileExtension: string
+            +FormatLogEntry(entry: LogEntry) string
+        }
+
+        class XmlLogFormatter {
+            +FileExtension: string
+            +FormatLogEntry(entry: LogEntry) string
+        }
+    }
+
+    %% ============================================
+    %% EasyLog_Transport
+    %% ============================================
+    namespace EasyLog_Transport {
+        class LocalLogTransport {
+            -_logFilePath: string
+            -_formatter: ILogFormatter
+            +SendLog(entry: LogEntry) Task
+            +IsAvailable() bool
+        }
+
+        class RemoteLogTransport {
+            -_serverUrl: string
+            -_httpClient: HttpClient
+            +SendLog(entry: LogEntry) Task
+            +IsAvailable() bool
+        }
+
+        class CompositeLogTransport {
+            -_transports: List~ILogTransport~
+            +AddTransport(transport: ILogTransport) void
+            +SendLog(entry: LogEntry) Task
+            +IsAvailable() bool
+        }
+    }
+
+    %% ============================================
+    %% LogCentralizer (Service Docker cote serveur)
+    %% ============================================
+    namespace LogCentralizer {
+        class LogCentralizerApp {
+            +Main() void
+        }
+
+        class LogController {
+            <<API Controller>>
+            -_logRepository: ILogRepository
+            +PostLog(entry: LogEntry) IActionResult
+            +PostState(state: BackupState) IActionResult
+            +GetLogs(date: string) IActionResult
+        }
+
+        class ILogRepository {
+            <<interface>>
+            +AppendLog(clientId: string, entry: LogEntry) void
+            +SaveState(clientId: string, state: BackupState) void
+            +GetLogs(date: string) List~string~
+        }
+
+        class FileLogRepository {
+            -_baseDirectory: string
+            -_formatter: ILogFormatter
+            +AppendLog(clientId: string, entry: LogEntry) void
+            +SaveState(clientId: string, state: BackupState) void
+            +GetLogs(date: string) List~string~
+        }
+    }
+
+    %% ============================================
+    %% RELATIONS
+    %% ============================================
+
+    %% Point d'entree
+    Program --> MainWindow
+    Program --> IBackupService
+
+    %% MVVM
+    MainWindow --> MainViewModel
+    MainViewModel --|> BaseViewModel
+    MainViewModel --> IBackupService
+    MainViewModel *-- BackupJobViewModel
+    BackupJobViewModel --> BackupJob
+    BackupJobViewModel --> BackupJobState
+    BackupJobViewModel --|> BaseViewModel
+    MainViewModel --> RelayCommand
+    BackupJobViewModel --> RelayCommand
+
+    %% Couche service
+    BackupService ..|> IBackupService
+    BackupService --> BackupJobFactory
+    BackupService --> ParallelBackupCoordinator
+    BackupService --> ILogger
+
+    %% Coordination parallele
+    ParallelBackupCoordinator --> PriorityFileManager
+    ParallelBackupCoordinator --> LargeFileTransferGuard
+    ParallelBackupCoordinator --> IBusinessSoftwareDetector
+    ParallelBackupCoordinator --> BackupJob
+
+    %% Detection logiciel metier (interface unifiee)
+    BusinessSoftwareDetector ..|> IBusinessSoftwareDetector
+
+    %% Factory
+    BackupJobFactory --> BackupJob
+    BackupJobFactory --> IBackupStrategy
+    BackupJobFactory --> CryptoSoftService
+    BackupJobFactory --> LoggerFactory
+
+    %% Modeles
+    BackupJob --> IBackupStrategy
+    BackupJob --> BackupJobState
+    BackupJob --> BackupConfig
+    BackupJob --> BackupState
+    BackupJob --> BackupEventArgs
+    BackupJob --> IBackupObserver
+
+    %% Strategies
+    CompleteBackupStrategy ..|> IBackupStrategy
+    CompleteBackupStrategy --> PriorityFileManager
+    CompleteBackupStrategy --> LargeFileTransferGuard
+    DifferentialBackupStrategy ..|> IBackupStrategy
+    DifferentialBackupStrategy --> PriorityFileManager
+    DifferentialBackupStrategy --> LargeFileTransferGuard
+
+    %% Observers
+    ConsoleObserver ..|> IBackupObserver
+    LoggerObserver ..|> IBackupObserver
+    StateObserver ..|> IBackupObserver
+    LoggerObserver --> ILogger
+    StateObserver --> ILogger
+
+    %% EasyLog
+    LoggerFactory --> Logger
+    LoggerFactory --> ILogFormatter
+    LoggerFactory --> ILogTransport
+    LoggerFactory --> LogDestination
+    LoggerFactory --> LogFormat
+    Logger ..|> ILogger
+    Logger --> ILogFormatter
+    Logger --> LogEntry
+    Logger --> ILogTransport
+    JsonLogFormatter ..|> ILogFormatter
+    XmlLogFormatter ..|> ILogFormatter
+
+    %% Transport de logs
+    LocalLogTransport ..|> ILogTransport
+    RemoteLogTransport ..|> ILogTransport
+    CompositeLogTransport ..|> ILogTransport
+    CompositeLogTransport o-- ILogTransport
+    LocalLogTransport --> ILogFormatter
+
+    %% Settings
+    AppSettings --> LogFormat
+    AppSettings --> LogDestination
+
+    %% Service Docker cote serveur
+    LogCentralizerApp --> LogController
+    LogController --> ILogRepository
+    ILogRepository <|.. FileLogRepository
+    FileLogRepository --> ILogFormatter
+    RemoteLogTransport ..> LogController
