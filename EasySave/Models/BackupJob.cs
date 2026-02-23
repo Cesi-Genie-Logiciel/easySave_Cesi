@@ -55,6 +55,23 @@ namespace EasySave.Models
             Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Termine : {_name}\n");
         }
 
+        /// <summary>
+        /// V3/P3: Pause/Resume/Stop seront implémentés dans le livrable 3 (P3).
+        /// Stub minimal pour conserver la compatibilité de l'API et permettre la compilation.
+        /// </summary>
+        public void Pause()
+        {
+            // TODO(v3/P3): implémenter une vraie pause via contexte d'exécution + synchro UI.
+        }
+
+        /// <summary>
+        /// V3/P3: Stub minimal. Voir TODO dans <see cref="Pause"/>.
+        /// </summary>
+        public void Stop()
+        {
+            // TODO(v3/P3): implémenter un vrai stop via CancellationToken.
+        }
+
         public void AddObserver(IBackupObserver observer) => _observers.Add(observer);
         public void RemoveObserver(IBackupObserver observer) => _observers.Remove(observer);
 
