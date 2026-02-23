@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  logcentralizer:
+    build:
+      context: ./LogCentralizer
+      dockerfile: Dockerfile
+    container_name: easysave-logcentralizer
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - LogDirectory=/app/logs
+    restart: unless-stopped
