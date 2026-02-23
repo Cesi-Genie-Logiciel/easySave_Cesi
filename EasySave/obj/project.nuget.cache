@@ -1,8 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "0Tdmgy/Zylw=",
+  "dgSpecHash": "nA8RNFJbpig=",
   "success": true,
-  "projectFilePath": "C:\\Users\\micha\\source\\repos\\easySave_Cesi\\EasySave\\EasySave.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "C:\\Users\\hp\\source\\repos\\Cesi-Genie-Logiciel\\easySave_Cesi\\EasySave\\EasySave.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\hp\\AppData\\Local\\Temp\\cursor-sandbox-cache\\74525ce16a70dc6865547ac90cb1ffd8\\nuget\\microsoft.netcore.app.ref\\8.0.24\\microsoft.netcore.app.ref.8.0.24.nupkg.sha512",
+    "C:\\Users\\hp\\AppData\\Local\\Temp\\cursor-sandbox-cache\\74525ce16a70dc6865547ac90cb1ffd8\\nuget\\microsoft.windowsdesktop.app.ref\\8.0.24\\microsoft.windowsdesktop.app.ref.8.0.24.nupkg.sha512",
+    "C:\\Users\\hp\\AppData\\Local\\Temp\\cursor-sandbox-cache\\74525ce16a70dc6865547ac90cb1ffd8\\nuget\\microsoft.aspnetcore.app.ref\\8.0.24\\microsoft.aspnetcore.app.ref.8.0.24.nupkg.sha512",
+    "C:\\Users\\hp\\AppData\\Local\\Temp\\cursor-sandbox-cache\\74525ce16a70dc6865547ac90cb1ffd8\\nuget\\microsoft.netcore.app.host.win-x64\\8.0.24\\microsoft.netcore.app.host.win-x64.8.0.24.nupkg.sha512"
+  ],
   "logs": []
 }
