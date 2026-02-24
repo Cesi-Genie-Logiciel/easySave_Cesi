@@ -3,13 +3,6 @@ using EasySave.Interfaces;
 
 namespace EasySave.Services;
 
-/// <summary>
-/// Wrapper that calls CryptoSoft as an external process.
-/// 
-/// In this repo, CryptoSoft exists as a separate .NET project (OutputType Exe).
-/// For now we locate it relative to the EasySave executable directory.
-/// This keeps EasySave independent from any UI and avoids hard dependencies.
-/// </summary>
 public sealed class CryptoSoftService : ICryptoService
 {
     private readonly string _cryptoSoftExecutablePath;
@@ -39,7 +32,7 @@ public sealed class CryptoSoftService : ICryptoService
             return -12;
 
         if (!AcquireMutex())
-            return -15; // Could not acquire mutex (timeout or conflict)
+            return -15;
 
         try
         {
@@ -50,11 +43,9 @@ public sealed class CryptoSoftService : ICryptoService
 
             if (!process.WaitForExit(30_000))
             {
-                try { process.Kill(entireProcessTree: true); } catch { /* ignore */ }
-                return -14; // timeout
+                try { process.Kill(entireProcessTree: true); } catch { }
+                return -14;
             }
-
-            // Convention: negative exit code = error; non-negative = success.
             if (process.ExitCode < 0)
                 return process.ExitCode;
 
@@ -70,14 +61,6 @@ public sealed class CryptoSoftService : ICryptoService
         }
     }
 
-    /// <summary>
-    /// Encrypts a file and returns:
-    /// - >0 : encryption duration in ms
-    /// - 0  : encryption succeeded but duration not available
-    /// - <0 : error code
-    /// 
-    /// Used by v2 branch feat/log-add-encryption-time.
-    /// </summary>
     public long EncryptInPlaceWithDurationMs(string filePath, string encryptionKey)
     {
         if (string.IsNullOrWhiteSpace(filePath))
@@ -90,7 +73,7 @@ public sealed class CryptoSoftService : ICryptoService
             return -12;
 
         if (!AcquireMutex())
-            return -15; // Could not acquire mutex (timeout or conflict)
+            return -15;
 
         try
         {
@@ -102,21 +85,17 @@ public sealed class CryptoSoftService : ICryptoService
 
             if (!process.WaitForExit(30_000))
             {
-                try { process.Kill(entireProcessTree: true); } catch { /* ignore */ }
+                try { process.Kill(entireProcessTree: true); } catch { }
                 return -14;
             }
 
             sw.Stop();
 
-            // CryptoSoft convention: exit code is elapsed ms on success, negative on error.
             if (process.ExitCode < 0)
                 return process.ExitCode;
 
-            // ExitCode is an int, cap to long.
             if (process.ExitCode > 0)
                 return process.ExitCode;
-
-            // Fallback: if exit code is 0, use measured time.
             return Math.Max(0, sw.ElapsedMilliseconds);
         }
         catch
@@ -131,7 +110,6 @@ public sealed class CryptoSoftService : ICryptoService
 
     private ProcessStartInfo BuildStartInfo(string filePath, string encryptionKey)
     {
-        // If we got a DLL (common when using `dotnet build` without publish), run it through dotnet.
         if (Path.GetExtension(_cryptoSoftExecutablePath).Equals(".dll", StringComparison.OrdinalIgnoreCase))
         {
             return new ProcessStartInfo
@@ -146,7 +124,6 @@ public sealed class CryptoSoftService : ICryptoService
             };
         }
 
-        // Otherwise assume native / apphost executable.
         return new ProcessStartInfo
         {
             FileName = _cryptoSoftExecutablePath,
@@ -159,17 +136,12 @@ public sealed class CryptoSoftService : ICryptoService
         };
     }
 
-    /// <summary>
-    /// Helper to build the default executable path when running from bin/Debug|Release.
-    /// </summary>
     public static string? TryGetDefaultCryptoSoftPath()
     {
         var repoRoot = TryFindRepoRootDirectory(AppContext.BaseDirectory);
         if (string.IsNullOrWhiteSpace(repoRoot))
             return null;
 
-        // Prefer exe/apphost if present, otherwise fall back to DLL.
-        // Note: CryptoSoft project may output under net8.0/<rid>/ (e.g. linux-x64).
         var directCandidates = new List<string>
         {
             // Root of net8.0
@@ -185,7 +157,6 @@ public sealed class CryptoSoftService : ICryptoService
         if (!string.IsNullOrWhiteSpace(found))
             return found;
 
-        // Fallback: search under net8.0/* (RID folders like linux-x64)
         foreach (var config in new[] { "Release", "Debug" })
         {
             var netDir = Path.Combine(repoRoot, "CryptoSoft", "bin", config, "net8.0");
@@ -211,7 +182,6 @@ public sealed class CryptoSoftService : ICryptoService
             }
             catch
             {
-                // ignore and continue
             }
         }
 
@@ -220,8 +190,6 @@ public sealed class CryptoSoftService : ICryptoService
 
     private static string? TryFindRepoRootDirectory(string startDirectory)
     {
-        // We use stable markers present at repo root.
-        // Some workflows may not have EasyLog.slnx around, but EasySave.slnx is present.
         var markers = new[] { "EasyLog.slnx", "EasySave.slnx" };
 
         try
@@ -242,7 +210,6 @@ public sealed class CryptoSoftService : ICryptoService
         }
         catch
         {
-            // ignore
         }
 
         return null;
