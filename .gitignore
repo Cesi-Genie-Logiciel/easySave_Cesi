@@ -1,7 +1,7 @@
 # Visual Studio
 .vs/
-bin/
-obj/
+**/bin/
+**/obj/
 
 # Build results
 [Dd]ebug/
