@@ -19,4 +19,12 @@ public interface ICryptoService
     /// Note: encryption duration is integrated in branch feat/log-add-encryption-time.
     /// </summary>
     int EncryptInPlace(string filePath, string encryptionKey);
+
+    /// <summary>
+    /// Encrypts a file and returns:
+    /// - >0 : encryption duration in ms
+    /// - 0  : encryption succeeded but duration not available
+    /// - <0 : error code
+    /// </summary>
+    long EncryptInPlaceWithDurationMs(string filePath, string encryptionKey);
 }

@@ -13,10 +13,13 @@ namespace EasySave.Services;
 public sealed class CryptoSoftService : ICryptoService
 {
     private readonly string _cryptoSoftExecutablePath;
+    private readonly Mutex _mutex;
+    private const int MutexTimeoutMs = 60_000;
 
     public CryptoSoftService(string cryptoSoftExecutablePath)
     {
         _cryptoSoftExecutablePath = cryptoSoftExecutablePath;
+        _mutex = new Mutex(false, "Global\\EasySave_CryptoSoft_Mutex");
     }
 
     public bool IsAvailable()
@@ -34,6 +37,9 @@ public sealed class CryptoSoftService : ICryptoService
 
         if (!IsAvailable())
             return -12;
+
+        if (!AcquireMutex())
+            return -15; // Could not acquire mutex (timeout or conflict)
 
         try
         {
@@ -58,6 +64,10 @@ public sealed class CryptoSoftService : ICryptoService
         {
             return -13;
         }
+        finally
+        {
+            ReleaseMutex();
+        }
     }
 
     /// <summary>
@@ -78,6 +88,9 @@ public sealed class CryptoSoftService : ICryptoService
 
         if (!IsAvailable())
             return -12;
+
+        if (!AcquireMutex())
+            return -15; // Could not acquire mutex (timeout or conflict)
 
         try
         {
@@ -109,6 +122,10 @@ public sealed class CryptoSoftService : ICryptoService
         catch
         {
             return -13;
+        }
+        finally
+        {
+            ReleaseMutex();
         }
     }
 
@@ -246,5 +263,28 @@ public sealed class CryptoSoftService : ICryptoService
             Path.Combine(repoRoot, "CryptoSoft", "bin", "Release", "net8.0", "linux-x64", "CryptoSoft.dll"),
             Path.Combine(repoRoot, "CryptoSoft", "bin", "Debug", "net8.0", "linux-x64", "CryptoSoft.dll"),
         };
+    }
+
+    private bool AcquireMutex()
+    {
+        try
+        {
+            return _mutex.WaitOne(MutexTimeoutMs);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void ReleaseMutex()
+    {
+        try
+        {
+            _mutex.ReleaseMutex();
+        }
+        catch
+        {
+        }
     }
 }

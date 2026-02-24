@@ -11,23 +11,27 @@ namespace EasySave
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            
+
             Console.WriteLine("=================================");
             Console.WriteLine("   EASYSAVE v1.0 - ProSoft");
             Console.WriteLine("=================================\n");
-            
+
             // Initialiser le service de configuration (Feature P2)
             ISettingsService settingsService = new SettingsService();
             Console.WriteLine();
-            
-            IBackupService service = new BackupService();
+
+            // Composition: BackupService dépend uniquement de IBusinessSoftwareDetector (v3 UML).
+            // Cleanup warnings: on passe null si aucun logiciel métier n'est configuré.
+            IBusinessSoftwareDetector? detector = CreateBusinessSoftwareDetectorOrNull(settingsService);
+            IBackupService service = new BackupService(new JobStorageService(), detector);
+
             bool running = true;
-            
+
             while (running)
             {
                 DisplayMenu();
                 string? choice = Console.ReadLine();
-                
+
                 try
                 {
                     switch (choice)
@@ -63,7 +67,7 @@ namespace EasySave
                 {
                     Console.WriteLine($"\n❌ Error: {ex.Message}");
                 }
-                
+
                 if (running)
                 {
                     Console.WriteLine("\nPress Enter to continue...");
@@ -71,7 +75,27 @@ namespace EasySave
                 }
             }
         }
-        
+
+        private static IBusinessSoftwareDetector? CreateBusinessSoftwareDetectorOrNull(ISettingsService settingsService)
+        {
+            try
+            {
+                var settings = settingsService.GetCurrent();
+                var businessName = settings?.BusinessSoftwareName;
+
+                if (string.IsNullOrWhiteSpace(businessName))
+                {
+                    return null;
+                }
+
+                return new BusinessSoftwareDetector(businessName);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         static void DisplayMenu()
         {
             try { Console.Clear(); } catch { }
