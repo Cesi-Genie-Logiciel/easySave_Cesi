@@ -1,35 +1,35 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using EasySave.Interfaces;
 using EasySave.Models;
 using EasySave.Services;
-using ProSoft.EasyLog.Interfaces;
-using ProSoft.EasyLog.Models;
 
 namespace EasySave.Strategies
 {
+    // Copies every file from source to target, regardless of whether it changed.
+    // Between each file copy, checks if the job has been paused or stopped
+    // through the execution context.
     public class CompleteBackupStrategy : IBackupStrategy
     {
-        private readonly ICryptoService? _crypto;
+        private readonly ICryptoService _crypto;
         private readonly string _encryptionKey;
-        private readonly BusinessSoftwareMonitor _monitor;
-        private readonly ILogger? _logger;
         private readonly List<string> _extensionsToEncrypt;
 
         private Action<BackupEventArgs>? _onFileTransferred;
         private string _jobName = string.Empty;
-        private bool _interruptionLogged;
 
-        public CompleteBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null,
-                                      ILogger? logger = null, List<string>? extensionsToEncrypt = null)
+        public CompleteBackupStrategy(ICryptoService crypto = null, string encryptionKey = null,
+                                      object logger = null, List<string> extensionsToEncrypt = null)
         {
-            _crypto = cryptoService;
+            _crypto = crypto;
             _encryptionKey = encryptionKey
                 ?? Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY")
                 ?? "EasySave";
-            _monitor = new BusinessSoftwareMonitor();
-            _logger = logger;
             _extensionsToEncrypt = extensionsToEncrypt ?? new List<string>();
         }
 
@@ -39,46 +39,49 @@ namespace EasySave.Strategies
             _jobName = jobName;
         }
 
-        public void ExecuteBackup(string sourcePath, string targetPath)
+        public async Task ExecuteBackup(string sourcePath, string targetPath, BackupExecutionContext context)
         {
-            Console.WriteLine("  Mode : Sauvegarde complete");
+            Console.WriteLine("  Mode: Complete backup");
 
             if (!Directory.Exists(targetPath))
                 Directory.CreateDirectory(targetPath);
 
-            var files = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
+            string[] files = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
             int total = files.Length;
             int done = 0;
 
-            foreach (var file in files)
+            // Merge extensions from constructor and from context
+            List<string> allExtensions = _extensionsToEncrypt
+                .Concat(context.ExtensionsToEncrypt)
+                .Distinct()
+                .ToList();
+
+            foreach (string file in files)
             {
-                if (_monitor.IsRunning())
-                {
-                    Console.WriteLine($"  Sauvegarde '{_jobName}' interrompue : logiciel metier detecte.");
-                    if (!_interruptionLogged)
-                    {
-                        _interruptionLogged = true;
-                        _logger?.LogJobEvent(_jobName, JobEventType.Interrupted,
-                            "Logiciel metier detecte", _monitor.ProcessName);
-                    }
-                    break;
-                }
+                // PAUSE CHECK: if Pause() was called, the event is in non-signaled state.
+                // Wait() blocks here until Resume() calls Set().
+                // We pass the token so Stop() during pause throws and exits cleanly.
+                context.PauseEvent.Wait(context.Token);
+
+                // STOP CHECK: if Stop() was called, this throws OperationCanceledException
+                // which BackupJob catches and sets state to Stopped.
+                context.Token.ThrowIfCancellationRequested();
 
                 string relative = Path.GetRelativePath(sourcePath, file);
                 string dest = Path.Combine(targetPath, relative);
 
-                string? destDir = Path.GetDirectoryName(dest);
+                string destDir = Path.GetDirectoryName(dest);
                 if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                     Directory.CreateDirectory(destDir);
 
-                var sw = Stopwatch.StartNew();
+                Stopwatch sw = Stopwatch.StartNew();
                 File.Copy(file, dest, overwrite: true);
 
-                long encryptMs = TryEncrypt(dest);
+                long encryptMs = TryEncrypt(dest, allExtensions);
                 sw.Stop();
 
                 done++;
-                Console.WriteLine($"    Copie : {relative}");
+                Console.WriteLine($"    Copy: {relative}");
 
                 _onFileTransferred?.Invoke(new BackupEventArgs
                 {
@@ -95,19 +98,15 @@ namespace EasySave.Strategies
             }
         }
 
-        private long TryEncrypt(string filePath)
+        private long TryEncrypt(string filePath, List<string> extensions)
         {
-            var ext = Path.GetExtension(filePath).ToLower();
-            bool shouldEncrypt = _extensionsToEncrypt.Any(e => e.ToLower() == ext);
+            string ext = Path.GetExtension(filePath).ToLower();
+            bool shouldEncrypt = extensions.Any(e => e.ToLower() == ext);
 
-            if (_crypto?.IsAvailable() != true || !shouldEncrypt)
+            if (_crypto == null || !_crypto.IsAvailable() || !shouldEncrypt)
                 return 0;
 
-            if (_crypto is CryptoSoftService svc)
-                return svc.EncryptInPlaceWithDurationMs(filePath, _encryptionKey);
-
-            int code = _crypto.EncryptInPlace(filePath, _encryptionKey);
-            return code < 0 ? code : 0;
+            return _crypto.EncryptInPlaceWithDurationMs(filePath, _encryptionKey);
         }
     }
 }

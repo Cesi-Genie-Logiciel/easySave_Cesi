@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Windows;
 using System.Windows.Input;
 using EasySave.GUI.Commands;
 using EasySave.Interfaces;
@@ -12,7 +13,7 @@ namespace EasySave.GUI.ViewModels
     {
         private readonly IBackupService _backupService;
         private BackupJobViewModel? _selectedBackupJob;
-        private string _statusText = "Pret";
+        private string _statusText = "Ready";
         private double _globalProgress;
 
         public ObservableCollection<BackupJobViewModel> BackupJobs { get; }
@@ -39,6 +40,9 @@ namespace EasySave.GUI.ViewModels
         public ICommand ExecuteBackupCommand { get; }
         public ICommand DeleteBackupCommand { get; }
         public ICommand ExecuteAllCommand { get; }
+        public ICommand PauseAllCommand { get; }
+        public ICommand ResumeAllCommand { get; }
+        public ICommand StopAllCommand { get; }
         public ICommand RefreshCommand { get; }
 
         public MainViewModel(IBackupService backupService)
@@ -50,6 +54,9 @@ namespace EasySave.GUI.ViewModels
             ExecuteBackupCommand = new RelayCommand(ExecuteBackup, CanExecuteBackup);
             DeleteBackupCommand = new RelayCommand(DeleteBackup, CanDeleteBackup);
             ExecuteAllCommand = new RelayCommand(ExecuteAll);
+            PauseAllCommand = new RelayCommand(PauseAll);
+            ResumeAllCommand = new RelayCommand(ResumeAll);
+            StopAllCommand = new RelayCommand(StopAll);
             RefreshCommand = new RelayCommand(Refresh);
 
             LoadJobs();
@@ -59,7 +66,7 @@ namespace EasySave.GUI.ViewModels
         {
             try
             {
-                var jobs = _backupService.GetAllBackupJobs();
+                System.Collections.Generic.List<BackupJob> jobs = _backupService.GetAllBackupJobs();
 
                 for (int i = BackupJobs.Count - 1; i >= 0; i--)
                 {
@@ -67,130 +74,123 @@ namespace EasySave.GUI.ViewModels
                         BackupJobs.RemoveAt(i);
                 }
 
-                foreach (var job in jobs)
+                foreach (BackupJob job in jobs)
                 {
                     if (!BackupJobs.Any(vm => vm.Name == job.Name))
                         BackupJobs.Add(new BackupJobViewModel(job));
                 }
 
-                StatusText = $"{jobs.Count} job(s) charge(s)";
+                StatusText = $"{jobs.Count} job(s) loaded";
             }
             catch (Exception ex)
             {
-                StatusText = $"Erreur chargement: {ex.Message}";
+                StatusText = $"Load error: {ex.Message}";
             }
         }
 
-        private void CreateBackupJob(object? parameter)
+        private void CreateBackupJob(object? param)
         {
             try
             {
-                var dialog = new Views.CreateJobDialog();
+                Views.CreateJobDialog dialog = new Views.CreateJobDialog();
                 if (dialog.ShowDialog() == true)
                 {
                     _backupService.CreateBackupJob(
-                        dialog.JobName,
-                        dialog.SourcePath,
-                        dialog.TargetPath,
-                        dialog.BackupType.ToLower());
-
+                        dialog.JobName, dialog.SourcePath,
+                        dialog.TargetPath, dialog.BackupType.ToLower());
                     LoadJobs();
-                    StatusText = $"Job '{dialog.JobName}' cree";
+                    StatusText = $"Job '{dialog.JobName}' created";
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                MessageBox.Show($"Error: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private void ExecuteBackup(object? parameter)
+        private void ExecuteBackup(object? param)
         {
             if (SelectedBackupJob == null) return;
-
-            var index = BackupJobs.IndexOf(SelectedBackupJob);
-            if (index < 0) return;
-
-            StatusText = $"Execution : {SelectedBackupJob.Name}";
-            System.Threading.Tasks.Task.Run(() =>
-            {
-                try
-                {
-                    _backupService.ExecuteBackupJob(index);
-                }
-                catch (Exception ex)
-                {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                    {
-                        System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                        StatusText = "Erreur execution";
-                    });
-                }
-            });
+            StatusText = $"Executing: {SelectedBackupJob.Name}";
+            SelectedBackupJob.PlayCommand.Execute(null);
         }
 
-        private bool CanExecuteBackup(object? parameter) => SelectedBackupJob != null;
+        private bool CanExecuteBackup(object? param) => SelectedBackupJob != null;
 
-        private void DeleteBackup(object? parameter)
+        private void DeleteBackup(object? param)
         {
             if (SelectedBackupJob == null) return;
 
-            var jobName = SelectedBackupJob.Name;
-            var result = System.Windows.MessageBox.Show(
-                $"Supprimer '{jobName}' ?", "Confirmation",
-                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            string jobName = SelectedBackupJob.Name;
+            MessageBoxResult result = MessageBox.Show(
+                $"Delete '{jobName}'?", "Confirmation",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
 
-            if (result == System.Windows.MessageBoxResult.Yes)
+            if (result == MessageBoxResult.Yes)
             {
                 try
                 {
-                    var index = BackupJobs.IndexOf(SelectedBackupJob);
+                    int index = BackupJobs.IndexOf(SelectedBackupJob);
                     if (index >= 0)
                     {
                         _backupService.DeleteBackupJob(index);
                         LoadJobs();
-                        StatusText = $"Job supprime : {jobName}";
+                        StatusText = $"Job deleted: {jobName}";
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    MessageBox.Show($"Error: {ex.Message}", "Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        private bool CanDeleteBackup(object? parameter) => SelectedBackupJob != null;
+        private bool CanDeleteBackup(object? param) => SelectedBackupJob != null;
 
-        private void ExecuteAll(object? parameter)
+        private void ExecuteAll(object? param)
         {
-            var indices = Enumerable.Range(0, BackupJobs.Count).ToList();
-            StatusText = $"Execution de {indices.Count} job(s)...";
-
-            System.Threading.Tasks.Task.Run(() =>
+            StatusText = $"Executing {BackupJobs.Count} job(s) in parallel...";
+            System.Threading.Tasks.Task.Run(async () =>
             {
                 try
                 {
-                    _backupService.ExecuteMultipleBackupJobs(indices);
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    await _backupService.ExecuteAllBackupJobsParallel();
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        StatusText = $"Execution de {indices.Count} job(s) terminee";
+                        StatusText = $"All {BackupJobs.Count} job(s) completed";
                     });
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    Application.Current.Dispatcher.Invoke(() =>
                     {
-                        System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        StatusText = $"Error: {ex.Message}";
                     });
                 }
             });
         }
 
-        private void Refresh(object? parameter)
+        private void PauseAll(object? param)
+        {
+            _backupService.PauseAllBackupJobs();
+            StatusText = "All jobs paused";
+        }
+
+        private void ResumeAll(object? param)
+        {
+            _backupService.ResumeAllBackupJobs();
+            StatusText = "All jobs resumed";
+        }
+
+        private void StopAll(object? param)
+        {
+            _backupService.StopAllBackupJobs();
+            StatusText = "All jobs stopped";
+        }
+
+        private void Refresh(object? param)
         {
             LoadJobs();
         }

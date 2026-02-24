@@ -1,9 +1,12 @@
 ﻿using ProSoft.EasyLog.Interfaces;
 using EasySave.Interfaces;
 using EasySave.Models;
+using System;
 
 namespace EasySave.Observers
 {
+    // Logs file transfer events to the daily log file through the EasyLog DLL.
+    // State changes are not logged here (that is the StateObserver's job).
     public class LoggerObserver : IBackupObserver
     {
         private readonly ILogger _logger;
@@ -15,17 +18,19 @@ namespace EasySave.Observers
 
         public void OnBackupStarted(string backupName) { }
 
-        public void OnFileTransferred(BackupEventArgs e)
+        public void OnFileTransferred(BackupEventArgs args)
         {
             _logger.LogFileTransfer(
-                e.BackupName,
-                e.SourceFile,
-                e.DestFile,
-                e.FileSize,
-                Convert.ToInt64(e.TransferTimeMs),
-                e.EncryptionTimeMs);
+                args.BackupName,
+                args.SourceFile,
+                args.DestFile,
+                args.FileSize,
+                Convert.ToInt64(args.TransferTimeMs),
+                args.EncryptionTimeMs);
         }
 
         public void OnBackupCompleted(string backupName) { }
+
+        public void OnBackupStateChanged(string backupName, BackupJobState state) { }
     }
 }
