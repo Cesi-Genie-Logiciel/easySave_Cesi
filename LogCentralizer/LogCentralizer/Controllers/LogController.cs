@@ -4,9 +4,6 @@ using LogCentralizer.Repositories;
 
 namespace LogCentralizer.Controllers
 {
-    /// <summary>
-    /// Contrôleur API pour recevoir les logs des clients (P4).
-    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
     public class LogController : ControllerBase
