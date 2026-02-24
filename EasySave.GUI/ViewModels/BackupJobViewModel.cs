@@ -83,7 +83,12 @@ namespace EasySave.GUI.ViewModels
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                Progress = 100;
+                // Only set 100% if the job actually completed successfully.
+                // If it was stopped or errored, keep the current progress value.
+                if (_state == BackupJobState.Completed)
+                {
+                    Progress = 100;
+                }
             });
         }
 
