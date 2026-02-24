@@ -3,11 +3,6 @@ using EasySave.Interfaces;
 
 namespace EasySave.Services
 {
-    /// <summary>
-    /// Détecte si un logiciel métier configuré est en cours d'exécution.
-    /// Implémente IBusinessSoftwareDetector avec surveillance active (polling) et événements.
-    /// P4 - feat/v3-business-software-auto-pause
-    /// </summary>
     public sealed class BusinessSoftwareDetector : IBusinessSoftwareDetector, IDisposable
     {
         private readonly string _processName;
