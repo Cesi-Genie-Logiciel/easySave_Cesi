@@ -165,14 +165,8 @@ namespace EasySave.Services
 
         public async Task ExecuteAllBackupJobsParallel()
         {
-            // V3/P1: Orchestration minimale.
-            // IMPORTANT: on n'appelle PAS TryExecuteBackupJob ici, car il contient une logique P4 (logiciel métier).
-            // L'objectif P1 est la parallélisation uniquement.
-            //
-            // Thread-safety note:
-            // - Les observers (LoggerObserver/StateObserver) font des IO fichiers.
-            // - Si plusieurs jobs écrivent vers le même répertoire/les mêmes fichiers, il faut une synchronisation
-            //   côté EasyLog / writer. On ne refactor pas ici: TODO v3 (P4/log transports) si besoin.
+            // V3/P1 (step 2): délègue l'orchestration au coordinateur.
+            // IMPORTANT: on n'appelle PAS TryExecuteBackupJob ici (logique P4).
 
             var jobsSnapshot = _jobs.ToList();
             if (jobsSnapshot.Count == 0)
@@ -180,30 +174,8 @@ namespace EasySave.Services
                 return;
             }
 
-            var exceptions = new List<Exception>();
-
-            var tasks = jobsSnapshot.Select(job => Task.Run(() =>
-            {
-                try
-                {
-                    job.Execute();
-                }
-                catch (Exception ex)
-                {
-                    lock (exceptions)
-                    {
-                        exceptions.Add(ex);
-                    }
-                }
-            })).ToList();
-
-            await Task.WhenAll(tasks);
-
-            // Remonter les erreurs de façon explicite (pas de fail silent).
-            if (exceptions.Count > 0)
-            {
-                throw new AggregateException("One or more backup jobs failed during parallel execution.", exceptions);
-            }
+            var coordinator = new ParallelBackupCoordinator();
+            await coordinator.ExecuteJobsInParallel(jobsSnapshot);
         }
 
         public void DeleteBackupJob(int index)
