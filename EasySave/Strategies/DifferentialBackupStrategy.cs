@@ -1,11 +1,11 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using EasySave.Interfaces;
 using EasySave.Models;
 using EasySave.Services;
 using ProSoft.EasyLog.Interfaces;
-using ProSoft.EasyLog.Models;
 
 namespace EasySave.Strategies
 {
@@ -13,13 +13,11 @@ namespace EasySave.Strategies
     {
         private readonly ICryptoService? _crypto;
         private readonly string _encryptionKey;
-        private readonly BusinessSoftwareMonitor _monitor;
         private readonly ILogger? _logger;
         private readonly List<string> _extensionsToEncrypt;
 
         private Action<BackupEventArgs>? _onFileTransferred;
         private string _jobName = string.Empty;
-        private bool _interruptionLogged;
 
         public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null,
                                           ILogger? logger = null, List<string>? extensionsToEncrypt = null)
@@ -28,7 +26,6 @@ namespace EasySave.Strategies
             _encryptionKey = encryptionKey
                 ?? Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY")
                 ?? "EasySave";
-            _monitor = new BusinessSoftwareMonitor();
             _logger = logger;
             _extensionsToEncrypt = extensionsToEncrypt ?? new List<string>();
         }
@@ -52,18 +49,6 @@ namespace EasySave.Strategies
 
             foreach (var file in files)
             {
-                if (_monitor.IsRunning())
-                {
-                    Console.WriteLine($"  Sauvegarde '{_jobName}' interrompue : logiciel metier detecte.");
-                    if (!_interruptionLogged)
-                    {
-                        _interruptionLogged = true;
-                        _logger?.LogJobEvent(_jobName, JobEventType.Interrupted,
-                            "Logiciel metier detecte", _monitor.ProcessName);
-                    }
-                    break;
-                }
-
                 string relative = Path.GetRelativePath(sourcePath, file);
                 string dest = Path.Combine(targetPath, relative);
 
@@ -92,7 +77,7 @@ namespace EasySave.Strategies
                         EncryptionTimeMs = encryptMs,
                         TotalFiles = total,
                         ProcessedFiles = done,
-                        Progress = (int)(done * 100.0 / total)
+                        Progress = total == 0 ? 100 : (int)(done * 100.0 / total)
                     });
                 }
                 else
