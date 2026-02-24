@@ -1,8 +1,5 @@
 namespace LogCentralizer.Models
 {
-    /// <summary>
-    /// Entrée de log reçue du client (P4).
-    /// </summary>
     public class LogEntry
     {
         public DateTime Timestamp { get; set; }

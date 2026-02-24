@@ -3,10 +3,6 @@ using LogCentralizer.Models;
 
 namespace LogCentralizer.Repositories
 {
-    /// <summary>
-    /// Repository de logs basé sur fichiers (P4).
-    /// Un seul fichier journalier, multi-utilisateurs.
-    /// </summary>
     public class FileLogRepository : ILogRepository
     {
         private readonly string _baseDirectory;

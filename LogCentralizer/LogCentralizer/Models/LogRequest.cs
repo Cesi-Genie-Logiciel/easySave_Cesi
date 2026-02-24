@@ -1,8 +1,5 @@
 namespace LogCentralizer.Models
 {
-    /// <summary>
-    /// Requête de log reçue du client (P4).
-    /// </summary>
     public class LogRequest
     {
         public string ClientId { get; set; } = string.Empty;
