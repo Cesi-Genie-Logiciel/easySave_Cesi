@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
 using EasySave.GUI.Commands;
@@ -14,10 +15,10 @@ namespace EasySave.GUI.ViewModels
         private LogFormat _logFormat;
         private string _logDestination = "Local";
         private string _logServerUrl = "http://localhost:5000";
-        private string _priorityExtensionsText = "";
-        private string _extensionsToEncryptText = "";
         private string _largeFileThresholdKoText = "1024";
         private string _businessSoftwareName = "";
+        private string? _selectedPriorityExtension;
+        private string? _selectedEncryptExtension;
 
         public LogFormat LogFormat
         {
@@ -37,16 +38,34 @@ namespace EasySave.GUI.ViewModels
             set => SetProperty(ref _logServerUrl, value);
         }
 
-        public string PriorityExtensionsText
+        public ObservableCollection<string> PriorityExtensionsList { get; } = new ObservableCollection<string>();
+        public ObservableCollection<string> ExtensionsToEncryptList { get; } = new ObservableCollection<string>();
+
+        public string? SelectedPriorityExtension
         {
-            get => _priorityExtensionsText;
-            set => SetProperty(ref _priorityExtensionsText, value);
+            get => _selectedPriorityExtension;
+            set => SetProperty(ref _selectedPriorityExtension, value);
         }
 
-        public string ExtensionsToEncryptText
+        public string? SelectedEncryptExtension
         {
-            get => _extensionsToEncryptText;
-            set => SetProperty(ref _extensionsToEncryptText, value);
+            get => _selectedEncryptExtension;
+            set => SetProperty(ref _selectedEncryptExtension, value);
+        }
+
+        private string? _selectedPriorityToRemove;
+        private string? _selectedEncryptToRemove;
+
+        public string? SelectedPriorityToRemove
+        {
+            get => _selectedPriorityToRemove;
+            set => SetProperty(ref _selectedPriorityToRemove, value);
+        }
+
+        public string? SelectedEncryptToRemove
+        {
+            get => _selectedEncryptToRemove;
+            set => SetProperty(ref _selectedEncryptToRemove, value);
         }
 
         public string LargeFileThresholdKoText
@@ -62,15 +81,27 @@ namespace EasySave.GUI.ViewModels
         }
 
         public ICommand SaveCommand { get; }
+        public ICommand ApplyCommand { get; }
         public ICommand CancelCommand { get; }
+        public ICommand AddPriorityExtensionCommand { get; }
+        public ICommand RemovePriorityExtensionCommand { get; }
+        public ICommand AddEncryptExtensionCommand { get; }
+        public ICommand RemoveEncryptExtensionCommand { get; }
 
         public IEnumerable<LogFormat> LogFormatValues => Enum.GetValues<LogFormat>();
+        public string[] LogDestinationValues { get; } = { "Local", "Centralized", "Both" };
+        public string[] AvailableExtensions { get; } = { ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png", ".txt", ".zip", ".xml", ".json" };
 
         public SettingsViewModel(ISettingsService settingsService)
         {
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
             SaveCommand = new RelayCommand(Save);
+            ApplyCommand = new RelayCommand(Apply);
             CancelCommand = new RelayCommand(Cancel);
+            AddPriorityExtensionCommand = new RelayCommand(AddPriorityExtension);
+            RemovePriorityExtensionCommand = new RelayCommand(RemovePriorityExtension);
+            AddEncryptExtensionCommand = new RelayCommand(AddEncryptExtension);
+            RemoveEncryptExtensionCommand = new RelayCommand(RemoveEncryptExtension);
             LoadFromSettings();
         }
 
@@ -80,24 +111,86 @@ namespace EasySave.GUI.ViewModels
             LogFormat = s.LogFormat;
             LogDestination = s.LogDestination ?? "Local";
             LogServerUrl = s.LogServerUrl ?? "http://localhost:5000";
-            PriorityExtensionsText = s.PriorityExtensions != null ? string.Join("\r\n", s.PriorityExtensions) : "";
-            ExtensionsToEncryptText = s.ExtensionsToEncrypt != null ? string.Join("\r\n", s.ExtensionsToEncrypt) : "";
+            PriorityExtensionsList.Clear();
+            if (s.PriorityExtensions != null)
+                foreach (var ext in s.PriorityExtensions)
+                    PriorityExtensionsList.Add(ext);
+            ExtensionsToEncryptList.Clear();
+            if (s.ExtensionsToEncrypt != null)
+                foreach (var ext in s.ExtensionsToEncrypt)
+                    ExtensionsToEncryptList.Add(ext);
             LargeFileThresholdKoText = s.LargeFileThresholdKo.ToString();
             BusinessSoftwareName = s.BusinessSoftwareName ?? "";
         }
 
-        private void Save(object? parameter)
+        private void AddPriorityExtension(object? parameter)
+        {
+            if (string.IsNullOrEmpty(SelectedPriorityExtension)) return;
+            var ext = SelectedPriorityExtension.Trim().ToLowerInvariant();
+            if (!ext.StartsWith(".")) ext = "." + ext;
+            if (!PriorityExtensionsList.Contains(ext))
+                PriorityExtensionsList.Add(ext);
+        }
+
+        private void RemovePriorityExtension(object? parameter)
+        {
+            if (SelectedPriorityToRemove != null)
+            {
+                PriorityExtensionsList.Remove(SelectedPriorityToRemove);
+                SelectedPriorityToRemove = null;
+            }
+        }
+
+        private void AddEncryptExtension(object? parameter)
+        {
+            if (string.IsNullOrEmpty(SelectedEncryptExtension)) return;
+            var ext = SelectedEncryptExtension.Trim().ToLowerInvariant();
+            if (!ext.StartsWith(".")) ext = "." + ext;
+            if (!ExtensionsToEncryptList.Contains(ext))
+                ExtensionsToEncryptList.Add(ext);
+        }
+
+        private void RemoveEncryptExtension(object? parameter)
+        {
+            if (SelectedEncryptToRemove != null)
+            {
+                ExtensionsToEncryptList.Remove(SelectedEncryptToRemove);
+                SelectedEncryptToRemove = null;
+            }
+        }
+
+        private void PersistToSettings()
         {
             var s = _settingsService.GetCurrent();
             s.LogFormat = LogFormat;
-            s.LogDestination = LogDestination.Trim();
+            s.LogDestination = (LogDestination ?? "Local").Trim();
             s.LogServerUrl = LogServerUrl?.Trim() ?? "http://localhost:5000";
-            s.PriorityExtensions = SplitLines(PriorityExtensionsText);
-            s.ExtensionsToEncrypt = SplitLines(ExtensionsToEncryptText);
+            s.PriorityExtensions = new List<string>(PriorityExtensionsList);
+            s.ExtensionsToEncrypt = new List<string>(ExtensionsToEncryptList);
             s.LargeFileThresholdKo = long.TryParse(LargeFileThresholdKoText?.Trim(), out var ko) ? ko : 1024;
             s.BusinessSoftwareName = BusinessSoftwareName?.Trim() ?? "";
-            _settingsService.Save(s);
+            try
+            {
+                _settingsService.Save(s);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Impossible d'enregistrer les paramètres : {ex.Message}", "Erreur",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                throw;
+            }
+        }
+
+        private void Save(object? parameter)
+        {
+            PersistToSettings();
             CloseRequested?.Invoke(this, true);
+        }
+
+        private void Apply(object? parameter)
+        {
+            PersistToSettings();
+            ApplyRequested?.Invoke(this, EventArgs.Empty);
         }
 
         private void Cancel(object? parameter)
@@ -105,18 +198,7 @@ namespace EasySave.GUI.ViewModels
             CloseRequested?.Invoke(this, false);
         }
 
-        private static List<string> SplitLines(string text)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return new List<string>();
-            return text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(x => x.Trim())
-                .Where(x => x.Length > 0)
-                .ToList();
-        }
-
-        /// <summary>
-        /// Raised when the window should close (true = saved, false = cancelled).
-        /// </summary>
         public event Action<SettingsViewModel, bool>? CloseRequested;
+        public event EventHandler? ApplyRequested;
     }
 }

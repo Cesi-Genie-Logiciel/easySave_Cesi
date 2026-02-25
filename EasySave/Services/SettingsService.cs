@@ -42,6 +42,9 @@ namespace EasySave.Services
 
         public void Save(AppSettings settings)
         {
+            var dir = Path.GetDirectoryName(_filePath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
             string json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(_filePath, json);
             _current = settings;

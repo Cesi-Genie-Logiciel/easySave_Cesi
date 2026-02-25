@@ -88,7 +88,7 @@
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right"
                     Margin="0,20,0,0">
-            <Button Content="✅ Créer" 
+            <Button x:Name="ConfirmButton" Content="✅ Créer" 
                     Click="Create_Click"
                     IsDefault="True"
                     Background="#107C10"

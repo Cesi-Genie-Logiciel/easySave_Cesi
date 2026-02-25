@@ -15,6 +15,10 @@ namespace EasySave.GUI.Views
                 DialogResult = saved;
                 Close();
             };
+            vm.ApplyRequested += (_, _) =>
+            {
+                System.Windows.MessageBox.Show("Paramètres appliqués.", "Paramètres", MessageBoxButton.OK, MessageBoxImage.Information);
+            };
             DataContext = vm;
         }
     }

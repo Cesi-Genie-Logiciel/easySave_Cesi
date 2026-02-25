@@ -20,7 +20,11 @@ namespace EasySave.GUI.ViewModels
         public BackupJobViewModel? SelectedBackupJob
         {
             get => _selectedBackupJob;
-            set => SetProperty(ref _selectedBackupJob, value);
+            set
+            {
+                if (SetProperty(ref _selectedBackupJob, value))
+                    System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+            }
         }
 
         public string StatusText
@@ -36,6 +40,7 @@ namespace EasySave.GUI.ViewModels
         }
 
         public ICommand CreateBackupCommand { get; }
+        public ICommand EditBackupCommand { get; } = null!;
         public ICommand ExecuteBackupCommand { get; }
         public ICommand DeleteBackupCommand { get; }
         public ICommand ExecuteAllCommand { get; }
@@ -51,6 +56,7 @@ namespace EasySave.GUI.ViewModels
             BackupJobs = new ObservableCollection<BackupJobViewModel>();
 
             CreateBackupCommand = new RelayCommand(CreateBackupJob);
+            EditBackupCommand = new RelayCommand(EditBackupJob, CanEditBackup);
             ExecuteBackupCommand = new RelayCommand(ExecuteBackup, CanExecuteBackup);
             DeleteBackupCommand = new RelayCommand(DeleteBackup, CanDeleteBackup);
             ExecuteAllCommand = new RelayCommand(ExecuteAll);
@@ -65,19 +71,10 @@ namespace EasySave.GUI.ViewModels
             try
             {
                 var jobs = _backupService.GetAllBackupJobs();
-
-                for (int i = BackupJobs.Count - 1; i >= 0; i--)
-                {
-                    if (!jobs.Any(j => j.Name == BackupJobs[i].Name))
-                        BackupJobs.RemoveAt(i);
-                }
-
+                // Rebuild list so ViewModels always wrap the current job objects (important after Edit).
+                BackupJobs.Clear();
                 foreach (var job in jobs)
-                {
-                    if (!BackupJobs.Any(vm => vm.Name == job.Name))
-                        BackupJobs.Add(new BackupJobViewModel(job));
-                }
-
+                    BackupJobs.Add(new BackupJobViewModel(job));
                 StatusText = $"{jobs.Count} job(s) charge(s)";
             }
             catch (Exception ex)
@@ -101,6 +98,42 @@ namespace EasySave.GUI.ViewModels
 
                     LoadJobs();
                     StatusText = $"Job '{dialog.JobName}' cree";
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            }
+        }
+
+        private bool CanEditBackup(object? parameter) => SelectedBackupJob != null;
+
+        private void EditBackupJob(object? parameter)
+        {
+            if (SelectedBackupJob == null) return;
+            var index = BackupJobs.IndexOf(SelectedBackupJob);
+            if (index < 0) return;
+            try
+            {
+                var dialog = new Views.CreateJobDialog(
+                    SelectedBackupJob.Name,
+                    SelectedBackupJob.SourcePath,
+                    SelectedBackupJob.TargetPath,
+                    SelectedBackupJob.BackupType)
+                {
+                    Owner = System.Windows.Application.Current.MainWindow
+                };
+                if (dialog.ShowDialog() == true)
+                {
+                    _backupService.UpdateBackupJob(
+                        index,
+                        dialog.JobName,
+                        dialog.SourcePath,
+                        dialog.TargetPath,
+                        dialog.BackupType.ToLower());
+                    LoadJobs();
+                    StatusText = $"Job '{dialog.JobName}' modifie";
                 }
             }
             catch (Exception ex)
