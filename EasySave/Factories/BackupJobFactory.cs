@@ -9,6 +9,7 @@ using EasySave.Interfaces;
 using EasySave.Services;
 using ProSoft.EasyLog;
 using ProSoft.EasyLog.Implementation;
+using ProSoft.EasyLog.Models;
 
 namespace EasySave.Factories
 {
@@ -37,19 +38,37 @@ namespace EasySave.Factories
             }
             catch { }
 
-            // Logger
-            var logger = LoggerFactory.CreateLogger(
-                ProSoft.EasyLog.LogFormat.JSON,
-                Path.Combine(target, "logs"));
-
-            // extensions to encrypt from settings
+            // Logger (P4: Local / Centralized / Both via settings)
+            ProSoft.EasyLog.Interfaces.ILogger logger;
             var extensions = new List<string>();
             try
             {
                 var settings = new SettingsService().GetCurrent();
                 extensions = settings.ExtensionsToEncrypt ?? new List<string>();
+
+                var destStr = (settings.LogDestination ?? "Local").Trim();
+                var serverUrl = settings.LogServerUrl?.Trim() ?? "http://localhost:5000";
+
+                if (string.Equals(destStr, "Local", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger = LoggerFactory.CreateLogger(
+                        ProSoft.EasyLog.LogFormat.JSON,
+                        Path.Combine(target, "logs"));
+                }
+                else
+                {
+                    var destination = string.Equals(destStr, "Both", StringComparison.OrdinalIgnoreCase)
+                        ? LogDestination.Both
+                        : LogDestination.Centralized;
+                    logger = LoggerFactory.Create(ProSoft.EasyLog.LogFormat.JSON, destination, serverUrl);
+                }
             }
-            catch { }
+            catch
+            {
+                logger = LoggerFactory.CreateLogger(
+                    ProSoft.EasyLog.LogFormat.JSON,
+                    Path.Combine(target, "logs"));
+            }
 
             // choice of strategy
             IBackupStrategy strategy = type.ToLower() switch
