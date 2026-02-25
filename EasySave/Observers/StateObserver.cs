@@ -27,5 +27,10 @@ namespace EasySave.Observers
         {
             _logger.UpdateStateToDisk();
         }
+
+        public void OnBackupStateChanged(string backupName, BackupJobState state)
+        {
+            _logger.UpdateStateToDisk();
+        }
     }
 }

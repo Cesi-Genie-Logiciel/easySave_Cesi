@@ -7,5 +7,6 @@ namespace EasySave.Interfaces
         void OnBackupStarted(string backupName);
         void OnFileTransferred(BackupEventArgs e);
         void OnBackupCompleted(string backupName);
+        void OnBackupStateChanged(string backupName, BackupJobState state);
     }
 }

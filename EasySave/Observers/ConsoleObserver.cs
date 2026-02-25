@@ -19,5 +19,10 @@ namespace EasySave.Observers
         {
             Console.WriteLine($"  Sauvegarde '{backupName}' terminee");
         }
+
+        public void OnBackupStateChanged(string backupName, BackupJobState state)
+        {
+            Console.WriteLine($"  Sauvegarde '{backupName}' : etat {state}");
+        }
     }
 }

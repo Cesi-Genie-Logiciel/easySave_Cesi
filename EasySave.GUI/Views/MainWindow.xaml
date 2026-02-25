@@ -92,6 +92,8 @@
                         Style="{StaticResource DeleteButtonStyle}"/>
                 <Button Content="🔄 Actualiser" 
                         Command="{Binding RefreshCommand}"/>
+                <Button Content="⚙️ Paramètres" 
+                        Command="{Binding OpenSettingsCommand}"/>
             </StackPanel>
         </Border>
 

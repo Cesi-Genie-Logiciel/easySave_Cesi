@@ -1,4 +1,4 @@
-﻿using ProSoft.EasyLog.Interfaces;
+using ProSoft.EasyLog.Interfaces;
 using EasySave.Interfaces;
 using EasySave.Models;
 
@@ -27,5 +27,7 @@ namespace EasySave.Observers
         }
 
         public void OnBackupCompleted(string backupName) { }
+
+        public void OnBackupStateChanged(string backupName, BackupJobState state) { }
     }
 }

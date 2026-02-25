@@ -25,6 +25,15 @@ namespace LogCentralizer.Controllers
             return Ok();
         }
 
+        [HttpPost("state")]
+        public IActionResult PostState([FromBody] StateRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ClientId))
+                return BadRequest("ClientId is required");
+            _logRepository.SaveState(request.ClientId, request.State);
+            return Ok();
+        }
+
         [HttpGet("{date}")]
         public IActionResult GetLogs(string date)
         {

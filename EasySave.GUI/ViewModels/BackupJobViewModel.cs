@@ -43,11 +43,15 @@ namespace EasySave.GUI.ViewModels
         }
 
         public ICommand PlayCommand { get; }
+        public ICommand PauseCommand { get; }
+        public ICommand StopCommand { get; }
 
         public BackupJobViewModel(BackupJob model)
         {
             _model = model ?? throw new ArgumentNullException(nameof(model));
             PlayCommand = new RelayCommand(ExecuteJob, CanExecuteJob);
+            PauseCommand = new RelayCommand(PauseJob, CanPauseOrStop);
+            StopCommand = new RelayCommand(StopJob, CanPauseOrStop);
 
             _model.BackupStarted += OnBackupStarted;
             _model.FileTransferred += OnFileTransferred;
@@ -92,6 +96,18 @@ namespace EasySave.GUI.ViewModels
         }
 
         private bool CanExecuteJob(object? parameter) => State != "En cours";
+
+        private bool CanPauseOrStop(object? parameter) => State == "En cours";
+
+        private void PauseJob(object? parameter)
+        {
+            _model.Pause();
+        }
+
+        private void StopJob(object? parameter)
+        {
+            _model.Stop();
+        }
 
         private void ExecuteJob(object? parameter)
         {

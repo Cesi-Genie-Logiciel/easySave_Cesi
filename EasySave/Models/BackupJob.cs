@@ -61,7 +61,14 @@ namespace EasySave.Models
         /// </summary>
         public void Pause()
         {
+            NotifyStateChanged(BackupJobState.Paused);
             // TODO(v3/P3): implémenter une vraie pause via contexte d'exécution + synchro UI.
+        }
+
+        public void Resume()
+        {
+            NotifyStateChanged(BackupJobState.Running);
+            // TODO(v3/P3): implémenter reprise via contexte d'exécution.
         }
 
         /// <summary>
@@ -69,6 +76,7 @@ namespace EasySave.Models
         /// </summary>
         public void Stop()
         {
+            NotifyStateChanged(BackupJobState.Stopped);
             // TODO(v3/P3): implémenter un vrai stop via CancellationToken.
         }
 
@@ -77,6 +85,7 @@ namespace EasySave.Models
 
         private void NotifyBackupStarted()
         {
+            NotifyStateChanged(BackupJobState.Running);
             foreach (var obs in _observers)
                 obs.OnBackupStarted(_name);
             BackupStarted?.Invoke(this, EventArgs.Empty);
@@ -93,7 +102,14 @@ namespace EasySave.Models
         {
             foreach (var obs in _observers)
                 obs.OnBackupCompleted(_name);
+            NotifyStateChanged(BackupJobState.Completed);
             BackupCompleted?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void NotifyStateChanged(BackupJobState state)
+        {
+            foreach (var obs in _observers)
+                obs.OnBackupStateChanged(_name, state);
         }
     }
 }

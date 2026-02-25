@@ -48,6 +48,26 @@ namespace EasySave.Interfaces
         /// </summary>
         void StopBackupJob(BackupJob job);
 
+        /// <summary>
+        /// Reprend un job en pause
+        /// </summary>
+        void ResumeBackupJob(BackupJob job);
+
+        /// <summary>
+        /// Met en pause tous les jobs en cours
+        /// </summary>
+        void PauseAllBackupJobs();
+
+        /// <summary>
+        /// Reprend tous les jobs en pause
+        /// </summary>
+        void ResumeAllBackupJobs();
+
+        /// <summary>
+        /// Arrête tous les jobs en cours
+        /// </summary>
+        void StopAllBackupJobs();
+
         // Events pour notifier la GUI des changements
         event EventHandler<BackupJob>? JobCreated;
         event EventHandler<BackupJob>? JobDeleted;

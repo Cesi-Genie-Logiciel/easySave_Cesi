@@ -40,10 +40,14 @@ namespace EasySave.GUI.ViewModels
         public ICommand DeleteBackupCommand { get; }
         public ICommand ExecuteAllCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand OpenSettingsCommand { get; }
 
-        public MainViewModel(IBackupService backupService)
+        private readonly ISettingsService? _settingsService;
+
+        public MainViewModel(IBackupService backupService, ISettingsService? settingsService = null)
         {
             _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
+            _settingsService = settingsService;
             BackupJobs = new ObservableCollection<BackupJobViewModel>();
 
             CreateBackupCommand = new RelayCommand(CreateBackupJob);
@@ -51,6 +55,7 @@ namespace EasySave.GUI.ViewModels
             DeleteBackupCommand = new RelayCommand(DeleteBackup, CanDeleteBackup);
             ExecuteAllCommand = new RelayCommand(ExecuteAll);
             RefreshCommand = new RelayCommand(Refresh);
+            OpenSettingsCommand = new RelayCommand(OpenSettings);
 
             LoadJobs();
         }
@@ -193,6 +198,16 @@ namespace EasySave.GUI.ViewModels
         private void Refresh(object? parameter)
         {
             LoadJobs();
+        }
+
+        private void OpenSettings(object? parameter)
+        {
+            if (_settingsService == null) return;
+            var window = new Views.SettingsWindow(_settingsService)
+            {
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            window.ShowDialog();
         }
     }
 }

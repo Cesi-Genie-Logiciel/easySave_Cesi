@@ -58,6 +58,18 @@ namespace LogCentralizer.Repositories
             }
         }
 
+        public void SaveState(string clientId, BackupState state)
+        {
+            lock (_lock)
+            {
+                var safeClientId = string.IsNullOrEmpty(clientId) ? "default" : string.Join("_", clientId.Split(Path.GetInvalidFileNameChars()));
+                var stateFileName = $"state_{safeClientId}_{DateTime.Now:yyyy-MM-dd}.json";
+                var stateFilePath = Path.Combine(_baseDirectory, stateFileName);
+                var json = JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(stateFilePath, json);
+            }
+        }
+
         public List<string> GetLogs(string date)
         {
             var logFileName = $"centralized_log_{date}.json";

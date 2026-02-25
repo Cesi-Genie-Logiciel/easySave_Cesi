@@ -104,15 +104,7 @@ namespace EasySave.Services
             }
         }
 
-        /// <summary>
-        /// Récupère le type de backup d'un job (helper method)
-        /// Note: Pour v2.0, cette info devrait être exposée dans BackupJob.
-        /// </summary>
-        private string GetBackupType(BackupJob job)
-        {
-            // TODO v2.0: Ajouter une propriété BackupType dans BackupJob
-            return "complete";
-        }
+        private string GetBackupType(BackupJob job) => job.BackupType;
 
         // ✅ FEATURE P2: Events pour notifier la GUI (v2.0)
         public event EventHandler<BackupJob>? JobCreated;
@@ -249,11 +241,33 @@ namespace EasySave.Services
         public void StopBackupJob(BackupJob job)
         {
             if (job == null)
-            {
                 throw new ArgumentNullException(nameof(job));
-            }
-
             job.Stop();
+        }
+
+        public void ResumeBackupJob(BackupJob job)
+        {
+            if (job == null)
+                throw new ArgumentNullException(nameof(job));
+            job.Resume();
+        }
+
+        public void PauseAllBackupJobs()
+        {
+            foreach (var job in _jobs)
+                job.Pause();
+        }
+
+        public void ResumeAllBackupJobs()
+        {
+            foreach (var job in _jobs)
+                job.Resume();
+        }
+
+        public void StopAllBackupJobs()
+        {
+            foreach (var job in _jobs)
+                job.Stop();
         }
     }
 }
