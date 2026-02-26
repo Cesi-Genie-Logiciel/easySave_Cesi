@@ -49,6 +49,10 @@ namespace EasySave.Factories
                 var destStr = (settings.LogDestination ?? "Local").Trim();
                 var serverUrl = settings.LogServerUrl?.Trim() ?? "http://localhost:5000";
 
+                // NOTE: EasyLog actuellement référencé dans ce repo expose CreateLogger(path) mais pas forcément LogDestination.
+                // On garde un mapping minimal et rétro-compatible :
+                // - Local => logs dans le target
+                // - Centralized/Both => logs dans un dossier "centralized" (la vraie centralisation serveur est gérée ailleurs)
                 if (string.Equals(destStr, "Local", StringComparison.OrdinalIgnoreCase))
                 {
                     logger = LoggerFactory.CreateLogger(
@@ -57,10 +61,11 @@ namespace EasySave.Factories
                 }
                 else
                 {
-                    var destination = string.Equals(destStr, "Both", StringComparison.OrdinalIgnoreCase)
-                        ? LogDestination.Both
-                        : LogDestination.Centralized;
-                    logger = LoggerFactory.Create(ProSoft.EasyLog.LogFormat.JSON, destination, serverUrl);
+                    var centralizedDir = Path.Combine(target, "logs", "centralized");
+                    logger = LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, centralizedDir);
+
+                    // serverUrl gardé pour compat future (P4) sans changer la logique actuelle
+                    _ = serverUrl;
                 }
             }
             catch
