@@ -5,7 +5,7 @@ using Microsoft.Win32;
 namespace EasySave.GUI.Views
 {
     /// <summary>
-    /// Dialogue de création d'un job de backup
+    /// Dialogue de création ou modification d'un job de backup (conforme schéma UpdateBackupJob).
     /// </summary>
     public partial class CreateJobDialog : Window
     {
@@ -14,9 +14,27 @@ namespace EasySave.GUI.Views
         public string TargetPath => TargetPathTextBox.Text;
         public string BackupType => BackupTypeComboBox.SelectedIndex == 0 ? "complete" : "differential";
 
+        public bool IsEditMode { get; }
+
         public CreateJobDialog()
         {
             InitializeComponent();
+            IsEditMode = false;
+        }
+
+        /// <summary>
+        /// Mode édition : pré-remplit les champs avec les données du job existant.
+        /// </summary>
+        public CreateJobDialog(string jobName, string sourcePath, string targetPath, string backupType)
+        {
+            InitializeComponent();
+            IsEditMode = true;
+            Title = "Modifier le Job de Sauvegarde";
+            JobNameTextBox.Text = jobName ?? "";
+            SourcePathTextBox.Text = sourcePath ?? "";
+            TargetPathTextBox.Text = targetPath ?? "";
+            BackupTypeComboBox.SelectedIndex = string.Equals(backupType, "differential", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+            ConfirmButton.Content = "✅ Enregistrer";
         }
 
         private void BrowseSource_Click(object sender, RoutedEventArgs e)

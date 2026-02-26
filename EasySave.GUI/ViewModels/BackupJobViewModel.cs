@@ -1,40 +1,22 @@
 using System;
-using System.Windows;
 using System.Windows.Input;
 using EasySave.GUI.Commands;
 using EasySave.Models;
 
 namespace EasySave.GUI.ViewModels
 {
-    /// <summary>
-    /// BackupJobViewModel conforme au diagramme v2.0 (lignes 55-69)
-    /// ViewModel pour un job de backup individuel avec binding vers la GUI
-    /// </summary>
     public class BackupJobViewModel : BaseViewModel
     {
         private readonly BackupJob _model;
         private int _progress;
-        private string _state = "Arrêté";
+        private string _state = "Arrete";
         private int _totalFiles;
         private int _filesRemaining;
 
-        // Properties conformes au diagramme
         public string Name => _model.Name;
         public string SourcePath => _model.SourcePath;
         public string TargetPath => _model.TargetPath;
-        
-        public string BackupType
-        {
-            get
-            {
-                // Récupérer le type depuis la stratégie
-                var strategyType = _model.GetType().GetProperty("_strategy", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?
-                    .GetValue(_model)?.GetType().Name ?? "Complete";
-                
-                return strategyType.Contains("Differential") ? "Différentielle" : "Complète";
-            }
-        }
+        public string BackupType => _model.BackupType;
 
         public int Progress
         {
@@ -60,7 +42,6 @@ namespace EasySave.GUI.ViewModels
             set => SetProperty(ref _filesRemaining, value);
         }
 
-        // Commands conformes au diagramme
         public ICommand PlayCommand { get; }
         public ICommand PauseCommand { get; }
         public ICommand StopCommand { get; }
@@ -68,31 +49,23 @@ namespace EasySave.GUI.ViewModels
         public BackupJobViewModel(BackupJob model)
         {
             _model = model ?? throw new ArgumentNullException(nameof(model));
+            PlayCommand = new RelayCommand(ExecuteJob, CanExecuteJob);
+            PauseCommand = new RelayCommand(PauseJob, CanPauseOrStop);
+            StopCommand = new RelayCommand(StopJob, CanPauseOrStop);
 
-            // Initialiser les commandes
-            PlayCommand = new RelayCommand(Execute, CanExecute);
-            PauseCommand = new RelayCommand(Pause, CanPause);
-            StopCommand = new RelayCommand(Stop, CanStop);
-
-            // S'abonner aux events du model (P2 events)
             _model.BackupStarted += OnBackupStarted;
             _model.FileTransferred += OnFileTransferred;
             _model.BackupCompleted += OnBackupCompleted;
         }
 
-        /// <summary>
-        /// Met à jour le ViewModel depuis le modèle (conforme diagramme ligne 68)
-        /// </summary>
         public void UpdateFromModel(BackupJob backupJob)
         {
-            // Mettre à jour toutes les propriétés
             OnPropertyChanged(nameof(Name));
             OnPropertyChanged(nameof(SourcePath));
             OnPropertyChanged(nameof(TargetPath));
             OnPropertyChanged(nameof(BackupType));
         }
 
-        // Event handlers pour P2 events
         private void OnBackupStarted(object? sender, EventArgs e)
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
@@ -116,21 +89,30 @@ namespace EasySave.GUI.ViewModels
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
-                State = "Terminé";
+                State = "Termine";
                 Progress = 100;
                 FilesRemaining = 0;
             });
         }
 
-        // Command methods
-        private bool CanExecute(object? parameter) => State != "En cours" && State != "En pause";
+        private bool CanExecuteJob(object? parameter) => State != "En cours";
 
-        private void Execute(object? parameter)
+        private bool CanPauseOrStop(object? parameter) => State == "En cours";
+
+        private void PauseJob(object? parameter)
         {
-            if (State == "En cours")
-                return;
-                
-            // Lancer l'exécution en async pour ne pas bloquer l'UI
+            _model.Pause();
+        }
+
+        private void StopJob(object? parameter)
+        {
+            _model.Stop();
+        }
+
+        private void ExecuteJob(object? parameter)
+        {
+            if (State == "En cours") return;
+
             System.Threading.Tasks.Task.Run(() =>
             {
                 try
@@ -146,22 +128,6 @@ namespace EasySave.GUI.ViewModels
                     });
                 }
             });
-        }
-
-        private bool CanPause(object? parameter) => State == "En cours";
-
-        private void Pause(object? parameter)
-        {
-            _model.Pause();
-            State = "En pause";
-        }
-
-        private bool CanStop(object? parameter) => State == "En cours" || State == "En pause";
-
-        private void Stop(object? parameter)
-        {
-            _model.Stop();
-            State = "Arrêté";
         }
     }
 }

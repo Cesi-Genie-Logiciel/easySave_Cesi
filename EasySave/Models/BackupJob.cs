@@ -10,129 +10,106 @@ namespace EasySave.Models
         private string _name;
         private string _sourcePath;
         private string _targetPath;
+        private string _backupType;
         private IBackupStrategy _strategy;
         private List<IBackupObserver> _observers = new List<IBackupObserver>();
-        
-        // ✅ FEATURE P2/P3: Events pour MVVM/GUI (v2.0)
-        /// <summary>
-        /// Déclenché lorsqu'un fichier est transféré pendant le backup
-        /// </summary>
+
         public event EventHandler<BackupEventArgs>? FileTransferred;
-        
-        /// <summary>
-        /// Déclenché lorsqu'un backup démarre
-        /// </summary>
         public event EventHandler? BackupStarted;
-        
-        /// <summary>
-        /// Déclenché lorsqu'un backup se termine
-        /// </summary>
         public event EventHandler? BackupCompleted;
-        
+
         public string Name => _name;
         public string SourcePath => _sourcePath;
         public string TargetPath => _targetPath;
-        
-        public BackupJob(string name, string source, string target, IBackupStrategy strategy)
+        public string BackupType => _backupType;
+
+        public BackupJob(string name, string source, string target, string backupType, IBackupStrategy strategy)
         {
             _name = name;
             _sourcePath = source;
             _targetPath = target;
+            _backupType = backupType;
             _strategy = strategy;
         }
-        
+
         public void Execute()
         {
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Starting backup: {_name}");
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Demarrage : {_name}");
             NotifyBackupStarted();
-            
+
             try
             {
-                // Configurer le callback de notification pour la stratégie
-                if (_strategy is Strategies.CompleteBackupStrategy completeStrategy)
-                {
-                    completeStrategy.SetNotificationCallback(NotifyFileTransferred, _name);
-                }
-                else if (_strategy is Strategies.DifferentialBackupStrategy differentialStrategy)
-                {
-                    differentialStrategy.SetNotificationCallback(NotifyFileTransferred, _name);
-                }
-                
+                if (_strategy is CompleteBackupStrategy complete)
+                    complete.SetNotificationCallback(NotifyFileTransferred, _name);
+                else if (_strategy is DifferentialBackupStrategy diff)
+                    diff.SetNotificationCallback(NotifyFileTransferred, _name);
+
                 _strategy.ExecuteBackup(_sourcePath, _targetPath);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during backup: {ex.Message}");
+                Console.WriteLine($"Erreur pendant la sauvegarde : {ex.Message}");
             }
-            
+
             NotifyBackupCompleted();
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Backup completed: {_name}\n");
+            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Termine : {_name}\n");
         }
-        
+
         /// <summary>
-        /// Met en pause le backup en cours
-        /// TODO v2.0: Implémenter la logique de pause avec CancellationToken dans les stratégies
+        /// V3/P3: Pause/Resume/Stop seront implémentés dans le livrable 3 (P3).
+        /// Stub minimal pour conserver la compatibilité de l'API et permettre la compilation.
         /// </summary>
         public void Pause()
         {
-            // Stub pour v2.0 - sera implémenté par P1 avec la GUI
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Pause requested for: {_name} (not yet implemented)");
+            NotifyStateChanged(BackupJobState.Paused);
+            // TODO(v3/P3): implémenter une vraie pause via contexte d'exécution + synchro UI.
         }
-        
+
+        public void Resume()
+        {
+            NotifyStateChanged(BackupJobState.Running);
+            // TODO(v3/P3): implémenter reprise via contexte d'exécution.
+        }
+
         /// <summary>
-        /// Arrête le backup en cours
-        /// TODO v2.0: Implémenter la logique d'arrêt avec CancellationToken dans les stratégies
+        /// V3/P3: Stub minimal. Voir TODO dans <see cref="Pause"/>.
         /// </summary>
         public void Stop()
         {
-            // Stub pour v2.0 - sera implémenté par P1 avec la GUI
-            Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] Stop requested for: {_name} (not yet implemented)");
+            NotifyStateChanged(BackupJobState.Stopped);
+            // TODO(v3/P3): implémenter un vrai stop via CancellationToken.
         }
-        
-        public void AddObserver(IBackupObserver observer)
-        {
-            _observers.Add(observer);
-        }
-        
-        public void RemoveObserver(IBackupObserver observer)
-        {
-            _observers.Remove(observer);
-        }
-        
+
+        public void AddObserver(IBackupObserver observer) => _observers.Add(observer);
+        public void RemoveObserver(IBackupObserver observer) => _observers.Remove(observer);
+
         private void NotifyBackupStarted()
         {
-            // Pattern Observer (v1.0)
-            foreach (var observer in _observers)
-            {
-                observer.OnBackupStarted(_name);
-            }
-            
-            // Events (v2.0 - pour MVVM/GUI)
+            NotifyStateChanged(BackupJobState.Running);
+            foreach (var obs in _observers)
+                obs.OnBackupStarted(_name);
             BackupStarted?.Invoke(this, EventArgs.Empty);
         }
-        
+
         private void NotifyFileTransferred(BackupEventArgs e)
         {
-            // Pattern Observer (v1.0)
-            foreach (var observer in _observers)
-            {
-                observer.OnFileTransferred(e);
-            }
-            
-            // Events (v2.0 - pour MVVM/GUI)
+            foreach (var obs in _observers)
+                obs.OnFileTransferred(e);
             FileTransferred?.Invoke(this, e);
         }
-        
+
         private void NotifyBackupCompleted()
         {
-            // Pattern Observer (v1.0)
-            foreach (var observer in _observers)
-            {
-                observer.OnBackupCompleted(_name);
-            }
-            
-            // Events (v2.0 - pour MVVM/GUI)
+            foreach (var obs in _observers)
+                obs.OnBackupCompleted(_name);
+            NotifyStateChanged(BackupJobState.Completed);
             BackupCompleted?.Invoke(this, EventArgs.Empty);
+        }
+
+        private void NotifyStateChanged(BackupJobState state)
+        {
+            foreach (var obs in _observers)
+                obs.OnBackupStateChanged(_name, state);
         }
     }
 }

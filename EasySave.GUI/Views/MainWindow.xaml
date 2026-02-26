@@ -83,6 +83,9 @@
                 <Button Content="➕ Nouveau Job" 
                         Command="{Binding CreateBackupCommand}"
                         Style="{StaticResource SuccessButtonStyle}"/>
+                <Button Content="✏️ Modifier" 
+                        Command="{Binding EditBackupCommand}"
+                        ToolTip="Modifier le job sélectionné"/>
                 <Button Content="▶️ Lancer Sélectionné" 
                         Command="{Binding ExecuteBackupCommand}"/>
                 <Button Content="▶️ Lancer Tous" 
@@ -92,6 +95,8 @@
                         Style="{StaticResource DeleteButtonStyle}"/>
                 <Button Content="🔄 Actualiser" 
                         Command="{Binding RefreshCommand}"/>
+                <Button Content="⚙️ Paramètres" 
+                        Command="{Binding OpenSettingsCommand}"/>
             </StackPanel>
         </Border>
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Windows;
 using System.Windows.Input;
 using EasySave.GUI.Commands;
 using EasySave.Interfaces;
@@ -9,24 +8,23 @@ using EasySave.Models;
 
 namespace EasySave.GUI.ViewModels
 {
-    /// <summary>
-    /// MainViewModel conforme au diagramme v2.0 (lignes 42-53)
-    /// ViewModel principal de l'application avec gestion des jobs
-    /// </summary>
     public class MainViewModel : BaseViewModel
     {
         private readonly IBackupService _backupService;
         private BackupJobViewModel? _selectedBackupJob;
-        private string _statusText = "Prêt";
+        private string _statusText = "Pret";
         private double _globalProgress;
 
-        // Properties conformes au diagramme
         public ObservableCollection<BackupJobViewModel> BackupJobs { get; }
-        
+
         public BackupJobViewModel? SelectedBackupJob
         {
             get => _selectedBackupJob;
-            set => SetProperty(ref _selectedBackupJob, value);
+            set
+            {
+                if (SetProperty(ref _selectedBackupJob, value))
+                    System.Windows.Input.CommandManager.InvalidateRequerySuggested();
+            }
         }
 
         public string StatusText
@@ -41,64 +39,43 @@ namespace EasySave.GUI.ViewModels
             set => SetProperty(ref _globalProgress, value);
         }
 
-        // Commands conformes au diagramme
         public ICommand CreateBackupCommand { get; }
+        public ICommand EditBackupCommand { get; } = null!;
         public ICommand ExecuteBackupCommand { get; }
         public ICommand DeleteBackupCommand { get; }
-        
-        // Bonus: Commands additionnels pour meilleure UX
         public ICommand ExecuteAllCommand { get; }
         public ICommand RefreshCommand { get; }
+        public ICommand OpenSettingsCommand { get; }
 
-        public MainViewModel(IBackupService backupService)
+        private readonly ISettingsService? _settingsService;
+
+        public MainViewModel(IBackupService backupService, ISettingsService? settingsService = null)
         {
             _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
+            _settingsService = settingsService;
             BackupJobs = new ObservableCollection<BackupJobViewModel>();
 
-            // Initialiser les commandes
             CreateBackupCommand = new RelayCommand(CreateBackupJob);
+            EditBackupCommand = new RelayCommand(EditBackupJob, CanEditBackup);
             ExecuteBackupCommand = new RelayCommand(ExecuteBackup, CanExecuteBackup);
             DeleteBackupCommand = new RelayCommand(DeleteBackup, CanDeleteBackup);
             ExecuteAllCommand = new RelayCommand(ExecuteAll);
             RefreshCommand = new RelayCommand(Refresh);
+            OpenSettingsCommand = new RelayCommand(OpenSettings);
 
-            // S'abonner aux events du service (P2 events)
-            _backupService.JobCreated += OnJobCreated;
-            _backupService.JobDeleted += OnJobDeleted;
-            _backupService.JobUpdated += OnJobUpdated;
-
-            // Charger les jobs existants (depuis persistance P2)
             LoadJobs();
         }
 
-        /// <summary>
-        /// Charge tous les jobs depuis le BackupService (P2)
-        /// </summary>
         private void LoadJobs()
         {
             try
             {
                 var jobs = _backupService.GetAllBackupJobs();
-                
-                // Supprimer les ViewModels qui n'existent plus dans le service
-                for (int i = BackupJobs.Count - 1; i >= 0; i--)
-                {
-                    if (!jobs.Any(j => j.Name == BackupJobs[i].Name))
-                    {
-                        BackupJobs.RemoveAt(i);
-                    }
-                }
-                
-                // Ajouter les nouveaux jobs qui n'ont pas encore de ViewModel
+                // Rebuild list so ViewModels always wrap the current job objects (important after Edit).
+                BackupJobs.Clear();
                 foreach (var job in jobs)
-                {
-                    if (!BackupJobs.Any(vm => vm.Name == job.Name))
-                    {
-                        BackupJobs.Add(new BackupJobViewModel(job));
-                    }
-                }
-
-                StatusText = $"{jobs.Count} job(s) chargé(s)";
+                    BackupJobs.Add(new BackupJobViewModel(job));
+                StatusText = $"{jobs.Count} job(s) charge(s)";
             }
             catch (Exception ex)
             {
@@ -106,15 +83,10 @@ namespace EasySave.GUI.ViewModels
             }
         }
 
-        /// <summary>
-        /// Crée un nouveau job de backup (conforme diagramme ligne 50)
-        /// </summary>
         private void CreateBackupJob(object? parameter)
         {
             try
             {
-                // TODO: Créer une fenêtre de dialogue pour saisir les infos
-                // Pour l'instant, valeurs de test
                 var dialog = new Views.CreateJobDialog();
                 if (dialog.ShowDialog() == true)
                 {
@@ -122,82 +94,93 @@ namespace EasySave.GUI.ViewModels
                         dialog.JobName,
                         dialog.SourcePath,
                         dialog.TargetPath,
-                        dialog.BackupType.ToLower()
-                    );
-                    
-                    StatusText = $"Job '{dialog.JobName}' créé";
+                        dialog.BackupType.ToLower());
+
+                    LoadJobs();
+                    StatusText = $"Job '{dialog.JobName}' cree";
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Erreur lors de la création: {ex.Message}", 
-                    "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                StatusText = "Erreur création job";
+                System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
         }
 
-        /// <summary>
-        /// Exécute un backup sélectionné (conforme diagramme ligne 51)
-        /// </summary>
-        private void ExecuteBackup(object? parameter)
-        {
-            if (SelectedBackupJob == null)
-                return;
+        private bool CanEditBackup(object? parameter) => SelectedBackupJob != null;
 
+        private void EditBackupJob(object? parameter)
+        {
+            if (SelectedBackupJob == null) return;
+            var index = BackupJobs.IndexOf(SelectedBackupJob);
+            if (index < 0) return;
             try
             {
-                var index = BackupJobs.IndexOf(SelectedBackupJob);
-                if (index >= 0)
+                var dialog = new Views.CreateJobDialog(
+                    SelectedBackupJob.Name,
+                    SelectedBackupJob.SourcePath,
+                    SelectedBackupJob.TargetPath,
+                    SelectedBackupJob.BackupType)
                 {
-                    StatusText = $"Exécution: {SelectedBackupJob.Name}";
-                    
-                    // Exécuter de façon asynchrone pour ne pas bloquer l'UI
-                    System.Threading.Tasks.Task.Run(() =>
-                    {
-                        try
-                        {
-                            _backupService.ExecuteBackupJob(index);
-                        }
-                        catch (Exception ex)
-                        {
-                            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                            {
-                                System.Windows.MessageBox.Show($"Erreur lors de l'exécution: {ex.Message}", 
-                                    "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                                StatusText = "Erreur exécution";
-                            });
-                        }
-                    });
+                    Owner = System.Windows.Application.Current.MainWindow
+                };
+                if (dialog.ShowDialog() == true)
+                {
+                    _backupService.UpdateBackupJob(
+                        index,
+                        dialog.JobName,
+                        dialog.SourcePath,
+                        dialog.TargetPath,
+                        dialog.BackupType.ToLower());
+                    LoadJobs();
+                    StatusText = $"Job '{dialog.JobName}' modifie";
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Erreur lors de l'exécution: {ex.Message}", 
-                    "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                StatusText = "Erreur exécution";
+                System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             }
+        }
+
+        private void ExecuteBackup(object? parameter)
+        {
+            if (SelectedBackupJob == null) return;
+
+            var index = BackupJobs.IndexOf(SelectedBackupJob);
+            if (index < 0) return;
+
+            StatusText = $"Execution : {SelectedBackupJob.Name}";
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    _backupService.ExecuteBackupJob(index);
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
+                            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        StatusText = "Erreur execution";
+                    });
+                }
+            });
         }
 
         private bool CanExecuteBackup(object? parameter) => SelectedBackupJob != null;
 
-        /// <summary>
-        /// Supprime un backup (conforme diagramme ligne 52)
-        /// </summary>
         private void DeleteBackup(object? parameter)
         {
-            if (SelectedBackupJob == null)
-                return;
+            if (SelectedBackupJob == null) return;
 
-            // Sauvegarder le nom avant suppression
             var jobName = SelectedBackupJob.Name;
-            
             var result = System.Windows.MessageBox.Show(
-                $"Êtes-vous sûr de vouloir supprimer '{jobName}' ?",
-                "Confirmation",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
+                $"Supprimer '{jobName}' ?", "Confirmation",
+                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
 
-            if (result == MessageBoxResult.Yes)
+            if (result == System.Windows.MessageBoxResult.Yes)
             {
                 try
                 {
@@ -205,100 +188,59 @@ namespace EasySave.GUI.ViewModels
                     if (index >= 0)
                     {
                         _backupService.DeleteBackupJob(index);
-                        StatusText = $"Job supprimé: {jobName}";
+                        LoadJobs();
+                        StatusText = $"Job supprime : {jobName}";
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"Erreur lors de la suppression: {ex.Message}", 
-                        "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                    StatusText = "Erreur suppression";
+                    System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
+                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                 }
             }
         }
 
         private bool CanDeleteBackup(object? parameter) => SelectedBackupJob != null;
 
-        /// <summary>
-        /// Exécute tous les jobs
-        /// </summary>
         private void ExecuteAll(object? parameter)
         {
-            try
+            var indices = Enumerable.Range(0, BackupJobs.Count).ToList();
+            StatusText = $"Execution de {indices.Count} job(s)...";
+
+            System.Threading.Tasks.Task.Run(() =>
             {
-                var indices = Enumerable.Range(0, BackupJobs.Count).ToList();
-                StatusText = $"Exécution de {indices.Count} job(s)...";
-                
-                // Exécuter de façon asynchrone pour ne pas bloquer l'UI
-                System.Threading.Tasks.Task.Run(() =>
+                try
                 {
-                    try
+                    _backupService.ExecuteMultipleBackupJobs(indices);
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        _backupService.ExecuteMultipleBackupJobs(indices);
-                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            StatusText = $"Exécution de {indices.Count} job(s) terminée";
-                        });
-                    }
-                    catch (Exception ex)
+                        StatusText = $"Execution de {indices.Count} job(s) terminee";
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        System.Windows.Application.Current.Dispatcher.Invoke(() =>
-                        {
-                            System.Windows.MessageBox.Show($"Erreur lors de l'exécution: {ex.Message}", 
-                                "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                            StatusText = "Erreur exécution multiple";
-                        });
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"Erreur lors de l'exécution: {ex.Message}", 
-                    "Erreur", MessageBoxButton.OK, MessageBoxImage.Error);
-                StatusText = "Erreur exécution multiple";
-            }
+                        System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
+                            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    });
+                }
+            });
         }
 
-        /// <summary>
-        /// Rafraîchit la liste des jobs
-        /// </summary>
         private void Refresh(object? parameter)
         {
             LoadJobs();
         }
 
-        // Event handlers pour les events P2
-        private void OnJobCreated(object? sender, BackupJob job)
+        private void OpenSettings(object? parameter)
         {
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            if (_settingsService == null) return;
+            var window = new Views.SettingsWindow(_settingsService)
             {
-                BackupJobs.Add(new BackupJobViewModel(job));
-                StatusText = $"Job créé: {job.Name}";
-            });
-        }
-
-        private void OnJobDeleted(object? sender, BackupJob job)
-        {
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-            {
-                var vm = BackupJobs.FirstOrDefault(j => j.Name == job.Name);
-                if (vm != null)
-                {
-                    BackupJobs.Remove(vm);
-                }
-            });
-        }
-
-        private void OnJobUpdated(object? sender, BackupJob job)
-        {
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-            {
-                var vm = BackupJobs.FirstOrDefault(j => j.Name == job.Name);
-                if (vm != null)
-                {
-                    vm.UpdateFromModel(job);
-                }
-            });
+                Owner = System.Windows.Application.Current.MainWindow
+            };
+            window.ShowDialog();
         }
     }
 }

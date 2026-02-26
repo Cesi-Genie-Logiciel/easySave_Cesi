@@ -1,150 +1,105 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using EasySave.Interfaces;
 using EasySave.Models;
 using EasySave.Services;
 using ProSoft.EasyLog.Interfaces;
-using ProSoft.EasyLog.Models;
 
 namespace EasySave.Strategies
 {
     public class DifferentialBackupStrategy : IBackupStrategy
     {
-        private readonly ICryptoService? _cryptoService;
+        private readonly ICryptoService? _crypto;
         private readonly string _encryptionKey;
-        private readonly BusinessSoftwareMonitor _businessSoftwareMonitor;
         private readonly ILogger? _logger;
         private readonly List<string> _extensionsToEncrypt;
 
         private Action<BackupEventArgs>? _onFileTransferred;
-        private string _backupName = string.Empty;
-        private bool _interruptionLogged;
+        private string _jobName = string.Empty;
 
-        public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null, ILogger? logger = null, List<string>? extensionsToEncrypt = null)
+        public DifferentialBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null,
+                                          ILogger? logger = null, List<string>? extensionsToEncrypt = null)
         {
-            _cryptoService = cryptoService;
-            _encryptionKey = !string.IsNullOrWhiteSpace(encryptionKey)
-                ? encryptionKey
-                : (Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY") ?? "EasySave");
-
-            _businessSoftwareMonitor = new BusinessSoftwareMonitor();
+            _crypto = cryptoService;
+            _encryptionKey = encryptionKey
+                ?? Environment.GetEnvironmentVariable("EASY_SAVE_ENCRYPTION_KEY")
+                ?? "EasySave";
             _logger = logger;
             _extensionsToEncrypt = extensionsToEncrypt ?? new List<string>();
         }
 
-        public void SetNotificationCallback(Action<BackupEventArgs> callback, string backupName)
+        public void SetNotificationCallback(Action<BackupEventArgs> callback, string jobName)
         {
             _onFileTransferred = callback;
-            _backupName = backupName;
+            _jobName = jobName;
         }
 
         public void ExecuteBackup(string sourcePath, string targetPath)
         {
-            Console.WriteLine("  Strategy: Differential Backup (copy only modified files)");
+            Console.WriteLine("  Mode : Sauvegarde differentielle");
 
             if (!Directory.Exists(targetPath))
-            {
                 Directory.CreateDirectory(targetPath);
-            }
 
-            var allFiles = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
-            int totalFiles = allFiles.Length;
-            int processedFiles = 0;
+            var files = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
+            int total = files.Length;
+            int done = 0;
 
-            foreach (var file in allFiles)
+            foreach (var file in files)
             {
-                // Business software detection: stop between files (finish current file, then stop).
-                if (_businessSoftwareMonitor.IsRunning())
-                {
-                    Console.WriteLine($"  [BusinessSoftware] Backup '{_backupName}' interrupted: business software detected.");
+                string relative = Path.GetRelativePath(sourcePath, file);
+                string dest = Path.Combine(targetPath, relative);
 
-                    if (!_interruptionLogged)
-                    {
-                        _interruptionLogged = true;
-                        _logger?.LogJobEvent(
-                            _backupName,
-                            JobEventType.Interrupted,
-                            "Business software detected during execution",
-                            _businessSoftwareMonitor.ProcessName);
-                    }
-
-                    break;
-                }
-
-                string relativePath = Path.GetRelativePath(sourcePath, file);
-                string destFile = Path.Combine(targetPath, relativePath);
-
-                string? destDir = Path.GetDirectoryName(destFile);
+                string? destDir = Path.GetDirectoryName(dest);
                 if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
-                {
                     Directory.CreateDirectory(destDir);
-                }
 
-                if (!File.Exists(destFile) ||
-                    File.GetLastWriteTime(file) > File.GetLastWriteTime(destFile))
+                if (!File.Exists(dest) || File.GetLastWriteTime(file) > File.GetLastWriteTime(dest))
                 {
-                    var stopwatch = Stopwatch.StartNew();
-                    File.Copy(file, destFile, overwrite: true);
+                    var sw = Stopwatch.StartNew();
+                    File.Copy(file, dest, overwrite: true);
 
-                    long encryptionTimeMs = 0;
+                    long encryptMs = TryEncrypt(dest);
+                    sw.Stop();
 
-                    // CryptoSoft integration (branch P4): encrypt copied file if service is available AND extension matches
-                    var fileExtension = Path.GetExtension(destFile).ToLower();
-                    bool shouldEncrypt = _extensionsToEncrypt.Count > 0 && _extensionsToEncrypt.Any(ext => ext.ToLower() == fileExtension);
-                    
-                    if (_cryptoService?.IsAvailable() == true && shouldEncrypt)
+                    done++;
+                    Console.WriteLine($"    Copie (modifie) : {relative}");
+
+                    _onFileTransferred?.Invoke(new BackupEventArgs
                     {
-                        Console.WriteLine($"[CryptoSoft] Encrypting {Path.GetFileName(destFile)} (extension: {fileExtension})");
-                        if (_cryptoService is EasySave.Services.CryptoSoftService crypto)
-                        {
-                            encryptionTimeMs = crypto.EncryptInPlaceWithDurationMs(destFile, _encryptionKey);
-                        }
-                        else
-                        {
-                            var encCode = _cryptoService.EncryptInPlace(destFile, _encryptionKey);
-                            encryptionTimeMs = encCode < 0 ? encCode : 0;
-                        }
-
-                        if (encryptionTimeMs < 0)
-                        {
-                            Console.WriteLine($"[CryptoSoft] Encryption failed for '{destFile}' (code {encryptionTimeMs}).");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"[CryptoSoft] Encrypted successfully in {encryptionTimeMs}ms");
-                        }
-                    }
-
-                    stopwatch.Stop();
-
-                    processedFiles++;
-                    Console.WriteLine($"    Copied (modified): {relativePath}");
-
-                    // Notifier le transfert de fichier
-                    if (_onFileTransferred != null)
-                    {
-                        var fileInfo = new FileInfo(file);
-                        var eventArgs = new BackupEventArgs
-                        {
-                            BackupName = _backupName,
-                            SourceFile = file,
-                            DestFile = destFile,
-                            FileSize = fileInfo.Length,
-                            TransferTimeMs = stopwatch.Elapsed.TotalMilliseconds,
-                            EncryptionTimeMs = encryptionTimeMs,
-                            TotalFiles = totalFiles,
-                            ProcessedFiles = processedFiles,
-                            Progress = (int)((processedFiles * 100.0) / totalFiles)
-                        };
-                        _onFileTransferred(eventArgs);
-                    }
+                        BackupName = _jobName,
+                        SourceFile = file,
+                        DestFile = dest,
+                        FileSize = new FileInfo(file).Length,
+                        TransferTimeMs = sw.Elapsed.TotalMilliseconds,
+                        EncryptionTimeMs = encryptMs,
+                        TotalFiles = total,
+                        ProcessedFiles = done,
+                        Progress = total == 0 ? 100 : (int)(done * 100.0 / total)
+                    });
                 }
                 else
                 {
-                    Console.WriteLine($"    Skipped (unchanged): {relativePath}");
+                    Console.WriteLine($"    Ignore (inchange) : {relative}");
                 }
             }
+        }
+
+        private long TryEncrypt(string filePath)
+        {
+            var ext = Path.GetExtension(filePath).ToLower();
+            bool shouldEncrypt = _extensionsToEncrypt.Any(e => e.ToLower() == ext);
+
+            if (_crypto?.IsAvailable() != true || !shouldEncrypt)
+                return 0;
+
+            if (_crypto is CryptoSoftService svc)
+                return svc.EncryptInPlaceWithDurationMs(filePath, _encryptionKey);
+
+            int code = _crypto.EncryptInPlace(filePath, _encryptionKey);
+            return code < 0 ? code : 0;
         }
     }
 }

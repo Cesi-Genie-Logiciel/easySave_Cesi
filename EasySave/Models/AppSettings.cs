@@ -36,6 +36,26 @@ namespace EasySave.Models
         public string BusinessSoftwareName { get; set; } = "";
 
         /// <summary>
+        /// Destination des logs : Local, Centralized, Both (P4)
+        /// </summary>
+        public string LogDestination { get; set; } = "Local";
+
+        /// <summary>
+        /// URL du serveur LogCentralizer pour mode Centralized ou Both (P4)
+        /// </summary>
+        public string LogServerUrl { get; set; } = "http://localhost:5000";
+
+        /// <summary>
+        /// Extensions de fichiers prioritaires (transfert avant les autres en parallèle)
+        /// </summary>
+        public List<string> PriorityExtensions { get; set; } = new List<string>();
+
+        /// <summary>
+        /// Seuil en Ko au-delà duquel un fichier est considéré comme "gros" (un seul transfert à la fois)
+        /// </summary>
+        public long LargeFileThresholdKo { get; set; } = 1024;
+
+        /// <summary>
         /// Constructeur par défaut avec valeurs initiales
         /// </summary>
         public AppSettings()

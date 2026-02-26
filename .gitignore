@@ -1,7 +1,7 @@
 # Visual Studio
 .vs/
-bin/
-obj/
+**/bin/
+**/obj/
 
 # Build results
 [Dd]ebug/
@@ -14,6 +14,12 @@ x86/
 
 # BMAD
 _bmad/
+
+# JetBrains IDEs
+.idea/
+
+# Rider/ReSharper user-specific settings
+*.DotSettings.user
 
 # User-specific files
 *.suo

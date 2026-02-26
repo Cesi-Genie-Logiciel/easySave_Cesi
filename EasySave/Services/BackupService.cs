@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using EasySave.Models;
 using EasySave.Factories;
 using EasySave.Interfaces;
@@ -17,16 +18,24 @@ namespace EasySave.Services
         private readonly IJobStorageService _storageService;
 
         // P4: détection logiciel métier + log job event
-        private readonly BusinessSoftwareMonitor _businessSoftwareMonitor = new BusinessSoftwareMonitor();
+        private readonly IBusinessSoftwareDetector? _businessSoftwareDetector;
         private readonly ILogger _serviceLogger;
 
         /// <summary>
         /// Constructeur avec injection du service de stockage.
         /// Charge automatiquement les jobs sauvegardés.
+        /// IMPORTANT: le détecteur est injecté via l'interface IBusinessSoftwareDetector.
         /// </summary>
-        public BackupService(IJobStorageService storageService)
+        public BackupService(IJobStorageService storageService, IBusinessSoftwareDetector? businessSoftwareDetector = null)
         {
             _storageService = storageService;
+            _businessSoftwareDetector = businessSoftwareDetector;
+
+            // Hook prêt pour v3 (non utilisé ici) : abonnement seulement si un détecteur est injecté.
+            if (_businessSoftwareDetector != null)
+            {
+                _businessSoftwareDetector.BusinessSoftwareStateChanged += _ => { /* TODO v3: orchestration auto-pause */ };
+            }
 
             var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
             _serviceLogger = ProSoft.EasyLog.Implementation.LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, logDir);
@@ -38,7 +47,7 @@ namespace EasySave.Services
         /// Constructeur par défaut (rétrocompatibilité)
         /// Crée un service de stockage par défaut.
         /// </summary>
-        public BackupService() : this(new JobStorageService())
+        public BackupService() : this(new JobStorageService(), null)
         {
         }
 
@@ -95,15 +104,7 @@ namespace EasySave.Services
             }
         }
 
-        /// <summary>
-        /// Récupère le type de backup d'un job (helper method)
-        /// Note: Pour v2.0, cette info devrait être exposée dans BackupJob.
-        /// </summary>
-        private string GetBackupType(BackupJob job)
-        {
-            // TODO v2.0: Ajouter une propriété BackupType dans BackupJob
-            return "complete";
-        }
+        private string GetBackupType(BackupJob job) => job.BackupType;
 
         // ✅ FEATURE P2: Events pour notifier la GUI (v2.0)
         public event EventHandler<BackupJob>? JobCreated;
@@ -139,10 +140,10 @@ namespace EasySave.Services
             }
 
             // P4: Interdire de démarrer si logiciel métier détecté
-            if (_businessSoftwareMonitor.IsRunning())
+            if (_businessSoftwareDetector?.IsBusinessSoftwareRunning() == true)
             {
                 var jobName = _jobs[index].Name;
-                var process = _businessSoftwareMonitor.ProcessName ?? string.Empty;
+                var process = _businessSoftwareDetector.BusinessSoftwareName ?? string.Empty;
 
                 Console.WriteLine($"\n[BusinessSoftware] Job '{jobName}' not started: business software is running.");
                 _serviceLogger.LogJobEvent(jobName, ProSoft.EasyLog.Models.JobEventType.Refused, "Business software running", process);
@@ -160,6 +161,21 @@ namespace EasySave.Services
             {
                 ExecuteBackupJob(index);
             }
+        }
+
+        public async Task ExecuteAllBackupJobsParallel()
+        {
+            // V3/P1 (step 2): délègue l'orchestration au coordinateur.
+            // IMPORTANT: on n'appelle PAS TryExecuteBackupJob ici (logique P4).
+
+            var jobsSnapshot = _jobs.ToList();
+            if (jobsSnapshot.Count == 0)
+            {
+                return;
+            }
+
+            var coordinator = new ParallelBackupCoordinator();
+            await coordinator.ExecuteJobsInParallel(jobsSnapshot);
         }
 
         public void DeleteBackupJob(int index)
@@ -225,11 +241,33 @@ namespace EasySave.Services
         public void StopBackupJob(BackupJob job)
         {
             if (job == null)
-            {
                 throw new ArgumentNullException(nameof(job));
-            }
-
             job.Stop();
+        }
+
+        public void ResumeBackupJob(BackupJob job)
+        {
+            if (job == null)
+                throw new ArgumentNullException(nameof(job));
+            job.Resume();
+        }
+
+        public void PauseAllBackupJobs()
+        {
+            foreach (var job in _jobs)
+                job.Pause();
+        }
+
+        public void ResumeAllBackupJobs()
+        {
+            foreach (var job in _jobs)
+                job.Resume();
+        }
+
+        public void StopAllBackupJobs()
+        {
+            foreach (var job in _jobs)
+                job.Stop();
         }
     }
 }

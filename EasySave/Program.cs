@@ -11,23 +11,27 @@ namespace EasySave
         static void Main(string[] args)
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-            
+
             Console.WriteLine("=================================");
             Console.WriteLine("   EASYSAVE v1.0 - ProSoft");
             Console.WriteLine("=================================\n");
-            
+
             // Initialiser le service de configuration (Feature P2)
             ISettingsService settingsService = new SettingsService();
             Console.WriteLine();
-            
-            IBackupService service = new BackupService();
+
+            // Composition: BackupService dépend uniquement de IBusinessSoftwareDetector (v3 UML).
+            // Cleanup warnings: on passe null si aucun logiciel métier n'est configuré.
+            IBusinessSoftwareDetector? detector = CreateBusinessSoftwareDetectorOrNull(settingsService);
+            IBackupService service = new BackupService(new JobStorageService(), detector);
+
             bool running = true;
-            
+
             while (running)
             {
                 DisplayMenu();
                 string? choice = Console.ReadLine();
-                
+
                 try
                 {
                     switch (choice)
@@ -63,7 +67,7 @@ namespace EasySave
                 {
                     Console.WriteLine($"\n❌ Error: {ex.Message}");
                 }
-                
+
                 if (running)
                 {
                     Console.WriteLine("\nPress Enter to continue...");
@@ -71,7 +75,27 @@ namespace EasySave
                 }
             }
         }
-        
+
+        private static IBusinessSoftwareDetector? CreateBusinessSoftwareDetectorOrNull(ISettingsService settingsService)
+        {
+            try
+            {
+                var settings = settingsService.GetCurrent();
+                var businessName = settings?.BusinessSoftwareName;
+
+                if (string.IsNullOrWhiteSpace(businessName))
+                {
+                    return null;
+                }
+
+                return new BusinessSoftwareDetector(businessName);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         static void DisplayMenu()
         {
             try { Console.Clear(); } catch { }
@@ -197,29 +221,59 @@ namespace EasySave
         {
             try { Console.Clear(); } catch { }
             Console.WriteLine("\n--- EXECUTE MULTIPLE BACKUP JOBS ---\n");
-            
+
             var jobs = service.GetAllBackupJobs();
             if (jobs.Count == 0)
             {
                 Console.WriteLine("⚠️  No jobs to execute.");
                 return;
             }
-            
+
+            // V3/P1: option d'exécution parallèle (sans refactor UI)
+            Console.WriteLine("Mode:");
+            Console.WriteLine("  1. Sequential (existing)");
+            Console.WriteLine("  2. Parallel (v3 P1)");
+            Console.Write("\nChoose mode (1/2): ");
+            var mode = Console.ReadLine()?.Trim();
+
+            if (mode == "2")
+            {
+                Console.WriteLine($"\n▶️  Executing {jobs.Count} job(s) in parallel...\n");
+                Console.WriteLine("============================================================");
+
+                try
+                {
+                    // Main is sync today: block here intentionally.
+                    service.ExecuteAllBackupJobsParallel().GetAwaiter().GetResult();
+                    Console.WriteLine("============================================================");
+                    Console.WriteLine($"\n✅ All backups completed (parallel)!\n");
+                }
+                catch (AggregateException ex)
+                {
+                    Console.WriteLine("============================================================");
+                    Console.WriteLine("\n❌ One or more backups failed during parallel execution.");
+                    Console.WriteLine(ex.Message);
+                }
+
+                return;
+            }
+
+            // --- Existing sequential mode ---
             // Afficher la liste
             for (int i = 0; i < jobs.Count; i++)
             {
                 Console.WriteLine($"[{i + 1}] {jobs[i].Name}");
             }
-            
+
             Console.Write("\nEnter job numbers separated by commas (e.g., 1,2,3): ");
             string? input = Console.ReadLine();
-            
+
             if (string.IsNullOrWhiteSpace(input))
             {
                 Console.WriteLine("❌ No jobs selected.");
                 return;
             }
-            
+
             var indices = new List<int>();
             foreach (var part in input.Split(','))
             {
@@ -228,18 +282,18 @@ namespace EasySave
                     indices.Add(num - 1);
                 }
             }
-            
+
             if (indices.Count == 0)
             {
                 Console.WriteLine("❌ No valid jobs selected.");
                 return;
             }
-            
+
             Console.WriteLine($"\n▶️  Executing {indices.Count} job(s)...\n");
             Console.WriteLine("============================================================");
-            
+
             service.ExecuteMultipleBackupJobs(indices);
-            
+
             Console.WriteLine("============================================================");
             Console.WriteLine($"\n✅ All selected backups completed!\n");
         }
