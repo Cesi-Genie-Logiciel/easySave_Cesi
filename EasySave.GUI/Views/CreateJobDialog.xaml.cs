@@ -1,12 +1,11 @@
+using Microsoft.Win32;
 using System;
 using System.Windows;
-using Microsoft.Win32;
 
 namespace EasySave.GUI.Views
 {
-    /// <summary>
-    /// Dialogue de création ou modification d'un job de backup (conforme schéma UpdateBackupJob).
-    /// </summary>
+    // Dialog for creating or editing a backup job.
+    // In edit mode, fields are pre-filled and the button text changes to "Save".
     public partial class CreateJobDialog : Window
     {
         public string JobName => JobNameTextBox.Text;
@@ -16,32 +15,33 @@ namespace EasySave.GUI.Views
 
         public bool IsEditMode { get; }
 
+        // Shortcut to the language manager
+        private LanguageManager Lang => LanguageManager.Instance;
+
         public CreateJobDialog()
         {
             InitializeComponent();
             IsEditMode = false;
         }
 
-        /// <summary>
-        /// Mode édition : pré-remplit les champs avec les données du job existant.
-        /// </summary>
+        // Edit mode: pre-fills the form with the existing job data
         public CreateJobDialog(string jobName, string sourcePath, string targetPath, string backupType)
         {
             InitializeComponent();
             IsEditMode = true;
-            Title = "Modifier le Job de Sauvegarde";
+            Title = Lang.Translate("EditJobTitle");
             JobNameTextBox.Text = jobName ?? "";
             SourcePathTextBox.Text = sourcePath ?? "";
             TargetPathTextBox.Text = targetPath ?? "";
             BackupTypeComboBox.SelectedIndex = string.Equals(backupType, "differential", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
-            ConfirmButton.Content = "✅ Enregistrer";
+            ConfirmButton.Content = Lang.Translate("Save");
         }
 
         private void BrowseSource_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFolderDialog
+            OpenFolderDialog dialog = new OpenFolderDialog
             {
-                Title = "Sélectionnez le dossier source"
+                Title = Lang.Translate("SelectSourceFolder")
             };
 
             if (dialog.ShowDialog() == true)
@@ -52,9 +52,9 @@ namespace EasySave.GUI.Views
 
         private void BrowseTarget_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFolderDialog
+            OpenFolderDialog dialog = new OpenFolderDialog
             {
-                Title = "Sélectionnez le dossier cible"
+                Title = Lang.Translate("SelectTargetFolder")
             };
 
             if (dialog.ShowDialog() == true)
@@ -65,24 +65,23 @@ namespace EasySave.GUI.Views
 
         private void Create_Click(object sender, RoutedEventArgs e)
         {
-            // Validation
             if (string.IsNullOrWhiteSpace(JobName))
             {
-                System.Windows.MessageBox.Show("Le nom du job est requis.", "Validation", 
+                MessageBox.Show(Lang.Translate("ValidationName"), Lang.Translate("Validation"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(SourcePath))
             {
-                System.Windows.MessageBox.Show("Le chemin source est requis.", "Validation", 
+                MessageBox.Show(Lang.Translate("ValidationSource"), Lang.Translate("Validation"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(TargetPath))
             {
-                System.Windows.MessageBox.Show("Le chemin cible est requis.", "Validation", 
+                MessageBox.Show(Lang.Translate("ValidationTarget"), Lang.Translate("Validation"),
                     MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
