@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasySave v3 — Diagramme de Cas d'Utilisation</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --border: #1e2330;
+    --accent: #00e5ff;
+    --text: #c8d0e0;
+    --text-dim: #5a6580;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 2.5rem 3rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.3rem;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  header p {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .content {
+    padding: 2.5rem 3rem;
+  }
+
+  .diagram-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    overflow-x: auto;
+  }
+
+  .diagram-box .mermaid {
+    display: flex;
+    justify-content: center;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Easy<span>Save</span> v3.0</h1>
+  <p>Diagramme de cas d'utilisation</p>
+</header>
+
+<div class="content">
+  <div class="diagram-box">
+    <div class="mermaid">
+flowchart TD
+    %% Acteurs
+    User(["👤 Utilisateur"])
+    Admin(["👤 Administrateur"])
+    BSD(["⚙️ BusinessSoftware\nDetector"])
+    Docker(["🐳 LogCentralizer\n(Docker)"])
+
+    %% Système
+    subgraph EasySave ["🖥️  Système EasySave v3"]
+
+        subgraph Jobs ["Gestion des jobs"]
+            UC1["Créer un job\nde sauvegarde"]
+            UC2["Modifier un job"]
+            UC3["Supprimer un job"]
+            UC4["Lister les jobs"]
+        end
+
+        subgraph Exec ["Exécution"]
+            UC5["Exécuter un job"]
+            UC6["Exécuter tous les jobs\n(parallèle)"]
+            UC7["Pauser un job"]
+            UC8["Reprendre un job"]
+            UC9["Stopper un job"]
+            UC10["Pauser / Reprendre\ntous les jobs"]
+        end
+
+        subgraph Strat ["Stratégie de sauvegarde"]
+            UC11["Sauvegarde complète"]
+            UC12["Sauvegarde différentielle"]
+        end
+
+        subgraph Crypto ["Chiffrement"]
+            UC13["Chiffrer les fichiers\n(CryptoSoft)"]
+        end
+
+        subgraph Prio ["Priorité"]
+            UC14["Gérer la priorité\ndes extensions"]
+        end
+
+        subgraph Conf ["Configuration"]
+            UC15["Configurer les paramètres\n(format log, seuil, extensions)"]
+            UC16["Choisir format log\n(JSON / XML)"]
+            UC17["Définir logiciel métier"]
+            UC18["Définir extensions\nà chiffrer"]
+            UC19["Définir extensions\nprioritaires"]
+        end
+
+        subgraph Log ["Journalisation"]
+            UC20["Journaliser les transferts"]
+            UC21["Sauvegarder l'état\ndes jobs"]
+            UC22["Envoyer logs\nau serveur Docker"]
+        end
+
+        subgraph Auto ["Automatisation"]
+            UC23["Détecter logiciel métier\nen arrière-plan"]
+            UC24["Pause automatique\nsi logiciel métier actif"]
+        end
+
+    end
+
+    %% Relations Utilisateur
+    User --> UC1
+    User --> UC2
+    User --> UC3
+    User --> UC4
+    User --> UC5
+    User --> UC6
+    User --> UC7
+    User --> UC8
+    User --> UC9
+    User --> UC10
+
+    %% Relations Admin
+    Admin --> UC15
+    UC15 --> UC16
+    UC15 --> UC17
+    UC15 --> UC18
+    UC15 --> UC19
+
+    %% Include / extend Exécution
+    UC5 -.->|«include»| UC11
+    UC5 -.->|«include»| UC12
+    UC6 -.->|«include»| UC5
+    UC5 -.->|«extend»| UC13
+    UC5 -.->|«include»| UC14
+    UC5 -.->|«include»| UC20
+    UC5 -.->|«include»| UC21
+
+    %% Logging
+    UC20 -.->|«extend»| UC22
+    UC21 -.->|«extend»| UC22
+
+    %% Auto
+    UC23 -.->|«include»| UC24
+    UC24 -.->|«extend»| UC7
+
+    %% Acteurs externes
+    BSD -->|déclenche| UC23
+    Docker -->|reçoit| UC22
+
+    %% Styles
+    classDef actor fill:#1a1f2e,stroke:#2a3050,color:#c8d0e0
+    classDef uc fill:#111318,stroke:#2a3050,color:#c8d0e0,rx:50
+    classDef system fill:#0d1117,stroke:#00e5ff,color:#00e5ff
+
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#111318',
+      primaryColor: '#1a1f2e',
+      primaryTextColor: '#c8d0e0',
+      primaryBorderColor: '#2a3050',
+      lineColor: '#4a5580',
+      secondaryColor: '#0d1117',
+      tertiaryColor: '#0a0c10',
+      clusterBkg: '#0d1117',
+      clusterBorder: '#2a3050',
+      titleColor: '#00e5ff',
+      edgeLabelBackground: '#111318'
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>EasySave v3 — Diagramme de Paquetage</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@800&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0c10; color:#c8d0e0; font-family:'JetBrains Mono',monospace; min-height:100vh; }
+  header { padding:2rem 3rem 1.5rem; border-bottom:1px solid #1e2330; }
+  header h1 { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; color:#fff; }
+  header h1 span { color:#00e5ff; }
+  header p { font-size:0.75rem; color:#5a6580; text-transform:uppercase; letter-spacing:.1em; margin-top:.3rem; }
+  .content { padding:2.5rem 3rem; }
+  .diagram-box { background:#111318; border:1px solid #1e2330; border-radius:8px; padding:2rem; overflow-x:auto; }
+  .mermaid { display:flex; justify-content:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Easy<span>Save</span> v3.0</h1>
+  <p>Diagramme de paquetage</p>
+</header>
+<div class="content">
+  <div class="diagram-box">
+    <div class="mermaid">
+graph TB
+
+  subgraph WPF ["📦 EasySave.WPF"]
+    Views["EasySave_Views\n─────────────\nMainWindow\nSettingsView\nCreateJobView"]
+    ViewModels["EasySave_ViewModels\n─────────────\nMainViewModel\nBackupJobViewModel\nCreateJobViewModel\nSettingsViewModel\nBaseViewModel"]
+    Commands["EasySave_Commands\n─────────────\nRelayCommand\nAppSettingsStatement"]
+  end
+
+  subgraph Services ["📦 EasySave.Services"]
+    Interfaces["EasySave_Services_Interfaces\n─────────────\nIBackupService\nIJobStorageService\nICryptoService\nIBusinessSoftwareDetector"]
+    Implementations["EasySave_Services_Implementations\n─────────────\nBackupService\nJsonJobStorageService\nCryptoSoftService\nBusinessSoftwareDetector"]
+  end
+
+  subgraph Core ["📦 EasySave.Core"]
+    Models["EasySave_Core_Models\n─────────────\nBackupJob\nBackupConfig\nBackupState\nBackupEventArgs\nAppSettings\nBackupJobState"]
+    Strategies["EasySave_Core_Strategies\n─────────────\nIBackupStrategy\nCompleteBackupStrategy\nDifferentialBackupStrategy"]
+    Observers["EasySave_Core_Observers\n─────────────\nIBackupObserver\nConsoleObserver\nLoggerObserver\nStateObserver"]
+    Coordination["EasySave_Core_Coordination\n─────────────\nParallelBackupCoordinator\nBackupExecutionContext\nPriorityFileManager\nLargeFileTransferGuard"]
+    Factory["EasySave_Core_Factory\n─────────────\nBackupJobFactory"]
+  end
+
+  subgraph EasyLog ["📦 EasyLog.dll"]
+    LogInterfaces["EasyLog_Interfaces\n─────────────\nILogger\nILogFormatter\nILogTransport"]
+    LogImpl["EasyLog_Implementation\n─────────────\nLogger\nLoggerFactory"]
+    LogModels["EasyLog_Models\n─────────────\nLogEntry\nLogFormat\nLogDestination\nJsonLogFormatter\nXmlLogFormatter"]
+    Transport["EasyLog_Transport\n─────────────\nLocalLogTransport\nRemoteLogTransport\nCompositeLogTransport"]
+  end
+
+  subgraph Docker ["📦 LogCentralizer (Docker)"]
+    LogCentral["LogCentralizer\n─────────────\nLogCentralizerApp\nLogController\nILogRepository\nFileLogRepository"]
+  end
+
+  %% Dépendances
+  Views --> ViewModels
+  ViewModels --> Commands
+  ViewModels --> Interfaces
+
+  Implementations --> Interfaces
+  Implementations --> Core
+  Implementations --> Coordination
+
+  Coordination --> Models
+  Coordination --> Strategies
+  Coordination --> Observers
+  Factory --> Models
+  Factory --> Strategies
+
+  Observers --> LogInterfaces
+  LogImpl --> LogInterfaces
+  LogImpl --> LogModels
+  Transport --> LogInterfaces
+  Transport --> LogModels
+
+  Transport -.->|HTTP| Docker
+
+  classDef pkg fill:#111318,stroke:#2a3050,color:#c8d0e0
+    </div>
+  </div>
+</div>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#111318',
+      primaryColor: '#1a1f2e',
+      primaryTextColor: '#c8d0e0',
+      primaryBorderColor: '#2a3050',
+      lineColor: '#4a5580',
+      clusterBkg: '#0d1117',
+      clusterBorder: '#00e5ff',
+      titleColor: '#00e5ff',
+      edgeLabelBackground: '#111318'
+    }
+  });
+</script>
+</body>
+</html>
