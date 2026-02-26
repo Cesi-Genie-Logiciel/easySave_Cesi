@@ -15,6 +15,12 @@ x86/
 # BMAD
 _bmad/
 
+# JetBrains IDEs
+.idea/
+
+# Rider/ReSharper user-specific settings
+*.DotSettings.user
+
 # User-specific files
 *.suo
 *.user

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EasySave v3 — Diagrammes de Séquence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --border: #1e2330;
+    --accent: #00e5ff;
+    --accent2: #7b61ff;
+    --accent3: #ff4d6d;
+    --text: #c8d0e0;
+    --text-dim: #5a6580;
+    --tab-active: #00e5ff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+  }
+
+  header {
+    padding: 2.5rem 3rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+  }
+
+  header h1 span { color: var(--accent); }
+
+  header p {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 3rem;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+
+  .tab {
+    padding: 1rem 1.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+  }
+
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--tab-active);
+    border-bottom-color: var(--tab-active);
+  }
+
+  .tab.active[data-color="purple"] { color: var(--accent2); border-bottom-color: var(--accent2); }
+  .tab.active[data-color="red"] { color: var(--accent3); border-bottom-color: var(--accent3); }
+  .tab.active[data-color="green"] { color: #39ff14; border-bottom-color: #39ff14; }
+
+  .panel { display: none; padding: 2.5rem 3rem; }
+  .panel.active { display: block; }
+
+  .panel-header {
+    margin-bottom: 2rem;
+  }
+
+  .panel-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+  }
+
+  .panel-header p {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+
+  .diagram-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    overflow-x: auto;
+  }
+
+  .diagram-box .mermaid {
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Override mermaid styles for dark theme */
+  .mermaid svg {
+    background: transparent !important;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Easy<span>Save</span> v3.0</h1>
+    <p>Diagrammes de séquence — Architecture parallèle + Docker</p>
+  </div>
+</header>
+
+<div class="tabs">
+  <button class="tab active" data-panel="seq1">01 · Exécution parallèle</button>
+  <button class="tab" data-panel="seq2" data-color="purple">02 · Priorité fichiers</button>
+  <button class="tab" data-panel="seq3" data-color="red">03 · Pause / Resume / Stop</button>
+  <button class="tab" data-panel="seq4" data-color="green">04 · Logiciel métier</button>
+  <button class="tab" data-panel="seq5">05 · Logging & Docker</button>
+  <button class="tab" data-panel="seq6" data-color="purple">06 · Création job + Chiffrement</button>
+</div>
+
+<!-- PANEL 1 -->
+<div class="panel active" id="seq1">
+  <div class="panel-header">
+    <h2>Exécution parallèle des jobs de sauvegarde</h2>
+    <p>L'utilisateur lance plusieurs jobs simultanément via l'interface WPF. Le BackupService délègue au ParallelBackupCoordinator qui orchestre les tâches en parallèle.</p>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+sequenceDiagram
+    actor User
+    participant MW as MainWindow (WPF)
+    participant MVM as MainViewModel
+    participant BS as BackupService
+    participant PBC as ParallelBackupCoordinator
+    participant BEC as BackupExecutionContext
+    participant Job1 as BackupJob #1
+    participant Job2 as BackupJob #2
+    participant Strat as IBackupStrategy
+
+    User->>MW: Clic "Execute All"
+    MW->>MVM: ExecuteAllCommand.Execute()
+    MVM->>BS: ExecuteAllBackupJobsParallel()
+    BS->>PBC: ExecuteJobsInParallel(jobs)
+    PBC->>BEC: BuildExecutionContext()
+    BEC-->>PBC: context (token, pauseEvent, guards)
+
+    par Job 1
+        PBC->>Job1: Execute(context)
+        Job1->>Strat: ExecuteBackup(src, dst, context)
+        loop Copie fichier par fichier
+            Strat->>BEC: BandwidthGuard.AcquireIfLargeFile(size)
+            Strat->>Strat: CopyFile()
+            Strat->>BEC: BandwidthGuard.Release(size)
+            Strat-->>Job1: NotifyObservers(BackupEventArgs)
+        end
+        Job1-->>PBC: Task completed
+    and Job 2
+        PBC->>Job2: Execute(context)
+        Job2->>Strat: ExecuteBackup(src, dst, context)
+        loop Copie fichier par fichier
+            Strat->>BEC: BandwidthGuard.AcquireIfLargeFile(size)
+            Strat->>Strat: CopyFile()
+            Strat->>BEC: BandwidthGuard.Release(size)
+            Strat-->>Job2: NotifyObservers(BackupEventArgs)
+        end
+        Job2-->>PBC: Task completed
+    end
+
+    PBC-->>BS: All tasks done
+    BS-->>MVM: Jobs terminés
+    MVM->>MW: RefreshUI (GlobalProgress = 100%)
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 2 -->
+<div class="panel" id="seq2">
+  <div class="panel-header">
+    <h2>Gestion de la priorité des fichiers</h2>
+    <p>Lorsqu'un job rencontre des fichiers à extension prioritaire, le PriorityFileManager bloque la copie des fichiers non-prioritaires jusqu'à ce que tous les fichiers prioritaires soient traités.</p>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+sequenceDiagram
+    participant Strat as IBackupStrategy
+    participant PFM as PriorityFileManager
+    participant BEC as BackupExecutionContext
+
+    Strat->>PFM: ScanAndCategorize(allFiles)
+    Note over PFM: Trie en priorityQueue / nonPriorityQueue
+
+    loop Fichiers prioritaires d'abord
+        Strat->>PFM: HasPendingPriorityFiles()
+        PFM-->>Strat: true
+        Strat->>PFM: DequeueNextFile()
+        PFM-->>Strat: filePath (prioritaire)
+        Strat->>Strat: CopyFile(filePath)
+    end
+
+    Note over PFM: File prioritaire vide
+
+    loop Fichiers non-prioritaires
+        Strat->>PFM: CanTransferNonPriority()
+        alt Autre job a encore des prioritaires
+            PFM-->>Strat: false
+            Strat->>PFM: WaitForPriorityCompletion()
+            Note over Strat: Attend (pause sur lock)
+        else Libre
+            PFM-->>Strat: true
+            Strat->>PFM: DequeueNextFile()
+            PFM-->>Strat: filePath (non-prioritaire)
+            Strat->>Strat: CopyFile(filePath)
+        end
+    end
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 3 -->
+<div class="panel" id="seq3">
+  <div class="panel-header">
+    <h2>Contrôle de flux — Pause, Resume, Stop</h2>
+    <p>L'utilisateur peut interrompre, reprendre ou stopper un job depuis l'interface. Les commandes se propagent jusqu'au BackupJob via les ViewModels et services.</p>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+sequenceDiagram
+    actor User
+    participant BJVM as BackupJobViewModel
+    participant BS as BackupService
+    participant PBC as ParallelBackupCoordinator
+    participant Job as BackupJob
+    participant Strat as IBackupStrategy
+
+    Note over Strat,Job: Job en cours d'exécution...
+
+    User->>BJVM: Clic "Pause"
+    BJVM->>BS: PauseBackupJob(index)
+    BS->>PBC: PauseJob(job)
+    PBC->>Job: Pause()
+    Job->>Job: _pauseEvent.Reset()
+    Note over Job: State = Paused
+
+    Note over Strat: Prochain CheckPauseRequested()...
+    Strat->>Job: CheckPauseRequested()
+    Job->>Job: _pauseEvent.Wait() ← bloqué ici
+
+    User->>BJVM: Clic "Resume"
+    BJVM->>BS: ResumeBackupJob(index)
+    BS->>PBC: ResumeJob(job)
+    PBC->>Job: Resume()
+    Job->>Job: _pauseEvent.Set()
+    Note over Job: State = Running
+    Job-->>Strat: Débloqué, continue la copie
+
+    User->>BJVM: Clic "Stop"
+    BJVM->>BS: StopBackupJob(index)
+    BS->>PBC: StopJob(job)
+    PBC->>Job: Stop()
+    Job->>Job: _cts.Cancel()
+    Note over Job: State = Stopped
+    Strat->>Job: Token.IsCancellationRequested → true
+    Note over Strat: Abandon de la copie
+    Job->>Job: NotifyObservers(StateChanged = Stopped)
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 4 -->
+<div class="panel" id="seq4">
+  <div class="panel-header">
+    <h2>Détection du logiciel métier (ex: calculatrice / ERP)</h2>
+    <p>Le BusinessSoftwareDetector surveille en arrière-plan les processus actifs. Si le logiciel métier démarre, tous les jobs en cours sont mis en pause automatiquement.</p>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+sequenceDiagram
+    participant BSD as BusinessSoftwareDetector
+    participant PBC as ParallelBackupCoordinator
+    participant Job1 as BackupJob #1
+    participant Job2 as BackupJob #2
+
+    Note over BSD: Monitoring actif (polling toutes Nms)
+
+    BSD->>BSD: IsBusinessSoftwareRunning() → false
+    Note over BSD: ... boucle de polling ...
+
+    Note right of BSD: Le logiciel métier se lance !
+    BSD->>BSD: IsBusinessSoftwareRunning() → true
+    BSD-->>PBC: BusinessSoftwareStateChanged(isRunning=true)
+    PBC->>PBC: OnBusinessSoftwareStateChanged(true)
+    PBC->>Job1: Pause()
+    PBC->>Job2: Pause()
+    Note over Job1,Job2: Tous les jobs sont mis en pause
+
+    Note right of BSD: L'utilisateur ferme le logiciel métier
+    BSD->>BSD: IsBusinessSoftwareRunning() → false
+    BSD-->>PBC: BusinessSoftwareStateChanged(isRunning=false)
+    PBC->>PBC: OnBusinessSoftwareStateChanged(false)
+    PBC->>Job1: Resume()
+    PBC->>Job2: Resume()
+    Note over Job1,Job2: Les jobs reprennent automatiquement
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 5 -->
+<div class="panel" id="seq5">
+  <div class="panel-header">
+    <h2>Chaîne de logging — Local & Docker centralisé</h2>
+    <p>Après chaque transfert de fichier, les observers déclenchent le pipeline de log. Selon la configuration (Local / Centralized / Both), les logs sont écrits sur disque ou envoyés au LogCentralizer Docker.</p>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+sequenceDiagram
+    participant Job as BackupJob
+    participant LogObs as LoggerObserver
+    participant StateObs as StateObserver
+    participant Logger as Logger
+    participant CLT as CompositeLogTransport
+    participant LLT as LocalLogTransport
+    participant RLT as RemoteLogTransport
+    participant LC as LogController (Docker)
+    participant Repo as FileLogRepository
+
+    Job->>Job: NotifyObservers(BackupEventArgs)
+    Job->>LogObs: OnFileTransferred(args)
+    Job->>StateObs: OnFileTransferred(args)
+
+    LogObs->>Logger: LogFileTransfer(jobName, src, dst, size, ms, encMs)
+    Logger->>Logger: new LogEntry(...)
+    Logger->>CLT: SendLog(entry)
+
+    par Transport local
+        CLT->>LLT: SendLog(entry)
+        LLT->>LLT: ILogFormatter.FormatLogEntry(entry)
+        LLT->>LLT: AppendToFile(logFilePath)
+    and Transport distant (Docker)
+        CLT->>RLT: SendLog(entry)
+        RLT->>RLT: IsAvailable() → true
+        RLT->>LC: POST /api/logs {clientId, entry}
+        LC->>Repo: AppendLog(clientId, entry)
+        Repo->>Repo: Écriture fichier sur volume Docker
+        LC-->>RLT: 200 OK
+    end
+
+    StateObs->>Logger: UpdateStateToDisk()
+    Logger->>CLT: SendLog(stateEntry)
+    </div>
+  </div>
+</div>
+
+<!-- PANEL 6 -->
+<div class="panel" id="seq6">
+  <div class="panel-header">
+    <h2>Création d'un job + Chiffrement CryptoSoft</h2>
+    <p>L'utilisateur crée un nouveau job depuis l'interface. Lors de l'exécution, les fichiers correspondant aux extensions configurées sont chiffrés via CryptoSoft (instance unique contrôlée par Mutex).</p>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+sequenceDiagram
+    actor User
+    participant CJV as CreateJobView
+    participant CJVM as CreateJobViewModel
+    participant BS as BackupService
+    participant BJF as BackupJobFactory
+    participant Job as BackupJob
+    participant Strat as CompleteBackupStrategy
+    participant CS as CryptoSoftService
+
+    User->>CJV: Remplit le formulaire + "Confirmer"
+    CJV->>CJVM: ConfirmCommand.Execute()
+    CJVM->>BS: CreateBackupJob(name, src, dst, type)
+    BS->>BJF: CreateBackupJob(name, src, dst, type)
+    BJF->>BJF: Choisit CompleteBackupStrategy ou Differential
+    BJF->>Job: new BackupJob(strategy, cryptoService)
+    Job-->>BJF: instance
+    BJF-->>BS: BackupJob
+    BS->>BS: _jobs.Add(job) + SaveJobs()
+    BS-->>CJVM: OK
+    CJVM->>CJV: Fermer la vue
+    CJVM->>CJVM: NavigateBack()
+
+    Note over User: Plus tard — Exécution du job
+
+    Job->>Strat: ExecuteBackup(src, dst, context)
+
+    loop Pour chaque fichier
+        Strat->>Strat: CopyFile(filePath)
+        alt Extension dans ExtensionsToEncrypt
+            Strat->>CS: IsAvailable()
+            CS-->>Strat: true
+            Strat->>CS: AcquireMutex()
+            Note over CS: Mutex global → instance unique CryptoSoft
+            CS->>CS: EncryptInPlaceWithDurationMs(filePath, key)
+            CS-->>Strat: encryptionTimeMs
+            CS->>CS: ReleaseMutex()
+            Strat->>Job: NotifyObservers(args avec encryptionTimeMs)
+        else Pas de chiffrement
+            Strat->>Job: NotifyObservers(args, encryptionTimeMs=0)
+        end
+    end
+    </div>
+  </div>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#111318',
+      primaryColor: '#1a1f2e',
+      primaryTextColor: '#c8d0e0',
+      primaryBorderColor: '#2a3050',
+      lineColor: '#4a5580',
+      secondaryColor: '#0d1117',
+      tertiaryColor: '#0a0c10',
+      noteBkgColor: '#1a1f2e',
+      noteTextColor: '#c8d0e0',
+      noteBorderColor: '#2a3050',
+      activationBorderColor: '#00e5ff',
+      activationBkgColor: '#00e5ff22',
+      sequenceNumberColor: '#00e5ff',
+      actorBkg: '#111318',
+      actorBorder: '#2a3050',
+      actorTextColor: '#c8d0e0',
+      actorLineColor: '#2a3050',
+      labelBoxBkgColor: '#111318',
+      labelBoxBorderColor: '#2a3050',
+      labelTextColor: '#c8d0e0',
+      loopTextColor: '#c8d0e0',
+      signalColor: '#00e5ff',
+      signalTextColor: '#c8d0e0'
+    },
+    sequence: {
+      diagramMarginX: 20,
+      diagramMarginY: 20,
+      actorMargin: 60,
+      width: 160,
+      height: 50,
+      boxMargin: 10,
+      boxTextMargin: 5,
+      noteMargin: 10,
+      messageMargin: 40,
+      mirrorActors: false,
+      bottomMarginAdj: 1,
+      useMaxWidth: true,
+      rightAngles: false,
+      showSequenceNumbers: false
+    }
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.panel).classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

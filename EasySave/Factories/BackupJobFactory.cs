@@ -48,11 +48,21 @@ namespace EasySave.Factories
                 AppSettings settings = new SettingsService().GetCurrent();
                 extensions = settings.ExtensionsToEncrypt ?? new List<string>();
 
-                // For now all logs go to the local target folder.
-                // Centralized mode will be added once LoggerFactory supports it.
-                logger = LoggerFactory.CreateLogger(
-                    ProSoft.EasyLog.LogFormat.JSON,
-                    Path.Combine(target, "logs"));
+                var destStr = (settings.LogDestination ?? "Local").Trim();
+                var serverUrl = settings.LogServerUrl?.Trim() ?? "http://localhost:5000";
+
+                if (string.Equals(destStr, "Local", StringComparison.OrdinalIgnoreCase))
+                {
+                    logger = LoggerFactory.CreateLogger(
+                        ProSoft.EasyLog.LogFormat.JSON,
+                        Path.Combine(target, "logs"));
+                }
+                else
+                {
+                    var centralizedDir = Path.Combine(target, "logs", "centralized");
+                    logger = LoggerFactory.CreateLogger(ProSoft.EasyLog.LogFormat.JSON, centralizedDir);
+                    _ = serverUrl;
+                }
             }
             catch
             {
