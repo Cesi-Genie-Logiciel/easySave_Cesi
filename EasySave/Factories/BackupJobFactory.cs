@@ -13,73 +13,65 @@ using ProSoft.EasyLog.Models;
 
 namespace EasySave.Factories
 {
+    // Creates fully configured BackupJob instances with all their dependencies:
+    // crypto service, logger, strategy, and observers.
     public class BackupJobFactory
     {
         public static BackupJob CreateBackupJob(string name, string source, string target, string type)
         {
             if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Le nom ne peut pas etre vide");
-            if (!Directory.Exists(source))
-                throw new DirectoryNotFoundException($"Dossier source introuvable : {source}");
+                throw new ArgumentException("Job name cannot be empty");
 
-            // Cruptographic service (optional)
+            if (!Directory.Exists(source))
+                throw new DirectoryNotFoundException("Source folder not found: " + source);
+
+            // Try to set up the encryption service if CryptoSoft is available
             ICryptoService? cryptoService = null;
             try
             {
-                var path = Environment.GetEnvironmentVariable("EASY_SAVE_CRYPTOSOFT_PATH")
-                           ?? CryptoSoftService.TryGetDefaultCryptoSoftPath();
-
+                string? path = Environment.GetEnvironmentVariable("EASY_SAVE_CRYPTOSOFT_PATH")
+                               ?? CryptoSoftService.TryGetDefaultCryptoSoftPath();
                 if (!string.IsNullOrWhiteSpace(path))
                 {
-                    var svc = new CryptoSoftService(path);
+                    CryptoSoftService svc = new CryptoSoftService(path);
                     if (svc.IsAvailable())
                         cryptoService = svc;
                 }
             }
             catch { }
 
-            // Logger (P4: Local / Centralized / Both via settings)
+            // Set up the logger and read encryption extensions from settings
             ProSoft.EasyLog.Interfaces.ILogger logger;
-            var extensions = new List<string>();
+            List<string> extensions = new List<string>();
             try
             {
-                var settings = new SettingsService().GetCurrent();
+                AppSettings settings = new SettingsService().GetCurrent();
                 extensions = settings.ExtensionsToEncrypt ?? new List<string>();
 
-                var destStr = (settings.LogDestination ?? "Local").Trim();
-                var serverUrl = settings.LogServerUrl?.Trim() ?? "http://localhost:5000";
-
-                if (string.Equals(destStr, "Local", StringComparison.OrdinalIgnoreCase))
-                {
-                    logger = LoggerFactory.CreateLogger(
-                        ProSoft.EasyLog.LogFormat.JSON,
-                        Path.Combine(target, "logs"));
-                }
-                else
-                {
-                    var destination = string.Equals(destStr, "Both", StringComparison.OrdinalIgnoreCase)
-                        ? LogDestination.Both
-                        : LogDestination.Centralized;
-                    logger = LoggerFactory.Create(ProSoft.EasyLog.LogFormat.JSON, destination, serverUrl);
-                }
+                // For now all logs go to the local target folder.
+                // Centralized mode will be added once LoggerFactory supports it.
+                logger = LoggerFactory.CreateLogger(
+                    ProSoft.EasyLog.LogFormat.JSON,
+                    Path.Combine(target, "logs"));
             }
             catch
             {
+                // Fallback if settings cannot be loaded
                 logger = LoggerFactory.CreateLogger(
                     ProSoft.EasyLog.LogFormat.JSON,
                     Path.Combine(target, "logs"));
             }
 
-            // choice of strategy
+            // Pick the right backup strategy based on the type
             IBackupStrategy strategy = type.ToLower() switch
             {
                 "complete" => new CompleteBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensions),
                 "differential" => new DifferentialBackupStrategy(cryptoService, logger: logger, extensionsToEncrypt: extensions),
-                _ => throw new ArgumentException($"Type de sauvegarde inconnu : {type}")
+                _ => throw new ArgumentException("Unknown backup type: " + type)
             };
 
-            var job = new BackupJob(name, source, target, type, strategy);
-
+            // Wire up the job with its observers
+            BackupJob job = new BackupJob(name, source, target, type, strategy);
             job.AddObserver(new ConsoleObserver());
             job.AddObserver(new LoggerObserver(logger));
             job.AddObserver(new StateObserver(logger));

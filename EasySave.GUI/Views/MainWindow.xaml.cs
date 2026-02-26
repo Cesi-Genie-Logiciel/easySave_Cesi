@@ -6,10 +6,9 @@ using System.Windows.Input;
 
 namespace EasySave.GUI.Views
 {
-    /// <summary>
-    /// MainWindow conforme au diagramme v2.0 (lignes 22-25)
-    /// Vue principale de l'application - Pattern MVVM strict (pas de logique ici)
-    /// </summary>
+    // Main window code-behind.
+    // Kept minimal because we follow MVVM. The only logic here is
+    // opening folders on double-click, which is purely a UI concern.
     public partial class MainWindow : Window
     {
         public MainWindow()
@@ -17,44 +16,40 @@ namespace EasySave.GUI.Views
             InitializeComponent();
         }
 
-        /// <summary>
-        /// Ouvre le dossier dans l'explorateur Windows lors du double-clic
-        /// </summary>
+        // Opens the folder in Windows Explorer when the user double-clicks a path
         private void OpenFolder_Click(object sender, MouseButtonEventArgs e)
         {
-            // Vérifier si c'est un double-clic
             if (e.ClickCount == 2 && sender is System.Windows.Controls.TextBlock textBlock)
             {
-                var path = textBlock.Tag as string;
+                string? path = textBlock.Tag as string;
                 if (!string.IsNullOrEmpty(path))
                 {
+                    LanguageManager lang = LanguageManager.Instance;
                     try
                     {
-                        // Vérifier si le dossier existe
                         if (Directory.Exists(path))
                         {
-                            // Ouvrir l'explorateur Windows à ce chemin
                             Process.Start(new ProcessStartInfo
                             {
                                 FileName = "explorer.exe",
-                                Arguments = $"\"{path}\"",
+                                Arguments = "\"" + path + "\"",
                                 UseShellExecute = true
                             });
                         }
                         else
                         {
-                            System.Windows.MessageBox.Show(
-                                $"Le dossier n'existe pas :\n{path}",
-                                "Dossier introuvable",
+                            MessageBox.Show(
+                                lang.Translate("FolderNotFound") + ":\n" + path,
+                                lang.Translate("Error"),
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Windows.MessageBox.Show(
-                            $"Impossible d'ouvrir le dossier :\n{ex.Message}",
-                            "Erreur",
+                        MessageBox.Show(
+                            lang.Translate("CannotOpenFolder") + ":\n" + ex.Message,
+                            lang.Translate("Error"),
                             MessageBoxButton.OK,
                             MessageBoxImage.Error);
                     }

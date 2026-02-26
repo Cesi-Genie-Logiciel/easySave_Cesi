@@ -9,6 +9,8 @@ using EasySave.Models;
 
 namespace EasySave.GUI.ViewModels
 {
+    // ViewModel for the settings window. Manages log format, encryption
+    // extensions, priority extensions, business software detection, etc.
     public class SettingsViewModel : BaseViewModel
     {
         private readonly ISettingsService _settingsService;
@@ -19,6 +21,11 @@ namespace EasySave.GUI.ViewModels
         private string _businessSoftwareName = "";
         private string? _selectedPriorityExtension;
         private string? _selectedEncryptExtension;
+        private string? _selectedPriorityToRemove;
+        private string? _selectedEncryptToRemove;
+
+        // Shortcut to the language manager
+        private LanguageManager Lang => LanguageManager.Instance;
 
         public LogFormat LogFormat
         {
@@ -52,9 +59,6 @@ namespace EasySave.GUI.ViewModels
             get => _selectedEncryptExtension;
             set => SetProperty(ref _selectedEncryptExtension, value);
         }
-
-        private string? _selectedPriorityToRemove;
-        private string? _selectedEncryptToRemove;
 
         public string? SelectedPriorityToRemove
         {
@@ -107,26 +111,29 @@ namespace EasySave.GUI.ViewModels
 
         private void LoadFromSettings()
         {
-            var s = _settingsService.GetCurrent();
-            LogFormat = s.LogFormat;
-            LogDestination = s.LogDestination ?? "Local";
-            LogServerUrl = s.LogServerUrl ?? "http://localhost:5000";
+            AppSettings settings = _settingsService.GetCurrent();
+            LogFormat = settings.LogFormat;
+            LogDestination = settings.LogDestination ?? "Local";
+            LogServerUrl = settings.LogServerUrl ?? "http://localhost:5000";
+
             PriorityExtensionsList.Clear();
-            if (s.PriorityExtensions != null)
-                foreach (var ext in s.PriorityExtensions)
+            if (settings.PriorityExtensions != null)
+                foreach (string ext in settings.PriorityExtensions)
                     PriorityExtensionsList.Add(ext);
+
             ExtensionsToEncryptList.Clear();
-            if (s.ExtensionsToEncrypt != null)
-                foreach (var ext in s.ExtensionsToEncrypt)
+            if (settings.ExtensionsToEncrypt != null)
+                foreach (string ext in settings.ExtensionsToEncrypt)
                     ExtensionsToEncryptList.Add(ext);
-            LargeFileThresholdKoText = s.LargeFileThresholdKo.ToString();
-            BusinessSoftwareName = s.BusinessSoftwareName ?? "";
+
+            LargeFileThresholdKoText = settings.LargeFileThresholdKo.ToString();
+            BusinessSoftwareName = settings.BusinessSoftwareName ?? "";
         }
 
         private void AddPriorityExtension(object? parameter)
         {
             if (string.IsNullOrEmpty(SelectedPriorityExtension)) return;
-            var ext = SelectedPriorityExtension.Trim().ToLowerInvariant();
+            string ext = SelectedPriorityExtension.Trim().ToLowerInvariant();
             if (!ext.StartsWith(".")) ext = "." + ext;
             if (!PriorityExtensionsList.Contains(ext))
                 PriorityExtensionsList.Add(ext);
@@ -144,7 +151,7 @@ namespace EasySave.GUI.ViewModels
         private void AddEncryptExtension(object? parameter)
         {
             if (string.IsNullOrEmpty(SelectedEncryptExtension)) return;
-            var ext = SelectedEncryptExtension.Trim().ToLowerInvariant();
+            string ext = SelectedEncryptExtension.Trim().ToLowerInvariant();
             if (!ext.StartsWith(".")) ext = "." + ext;
             if (!ExtensionsToEncryptList.Contains(ext))
                 ExtensionsToEncryptList.Add(ext);
@@ -161,22 +168,25 @@ namespace EasySave.GUI.ViewModels
 
         private void PersistToSettings()
         {
-            var s = _settingsService.GetCurrent();
-            s.LogFormat = LogFormat;
-            s.LogDestination = (LogDestination ?? "Local").Trim();
-            s.LogServerUrl = LogServerUrl?.Trim() ?? "http://localhost:5000";
-            s.PriorityExtensions = new List<string>(PriorityExtensionsList);
-            s.ExtensionsToEncrypt = new List<string>(ExtensionsToEncryptList);
-            s.LargeFileThresholdKo = long.TryParse(LargeFileThresholdKoText?.Trim(), out var ko) ? ko : 1024;
-            s.BusinessSoftwareName = BusinessSoftwareName?.Trim() ?? "";
+            AppSettings settings = _settingsService.GetCurrent();
+            settings.LogFormat = LogFormat;
+            settings.LogDestination = (LogDestination ?? "Local").Trim();
+            settings.LogServerUrl = LogServerUrl?.Trim() ?? "http://localhost:5000";
+            settings.PriorityExtensions = new List<string>(PriorityExtensionsList);
+            settings.ExtensionsToEncrypt = new List<string>(ExtensionsToEncryptList);
+            settings.LargeFileThresholdKo = long.TryParse(LargeFileThresholdKoText?.Trim(), out long ko) ? ko : 1024;
+            settings.BusinessSoftwareName = BusinessSoftwareName?.Trim() ?? "";
             try
             {
-                _settingsService.Save(s);
+                _settingsService.Save(settings);
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Impossible d'enregistrer les paramètres : {ex.Message}", "Erreur",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Windows.MessageBox.Show(
+                    Lang.Translate("Error") + ": " + ex.Message,
+                    Lang.Translate("Error"),
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
                 throw;
             }
         }

@@ -5,13 +5,19 @@ using EasySave.Models;
 
 namespace EasySave.GUI.ViewModels
 {
+    // Wraps a BackupJob model for display in the DataGrid.
+    // Handles play/pause/stop commands and real-time progress tracking.
+    // State labels come from LanguageManager so they match the active language.
     public class BackupJobViewModel : BaseViewModel
     {
         private readonly BackupJob _model;
         private int _progress;
-        private string _state = "Arrete";
+        private string _state;
         private int _totalFiles;
         private int _filesRemaining;
+
+        // Shortcut to the language manager
+        private LanguageManager Lang => LanguageManager.Instance;
 
         public string Name => _model.Name;
         public string SourcePath => _model.SourcePath;
@@ -49,6 +55,8 @@ namespace EasySave.GUI.ViewModels
         public BackupJobViewModel(BackupJob model)
         {
             _model = model ?? throw new ArgumentNullException(nameof(model));
+            _state = Lang.Translate("Stopped");
+
             PlayCommand = new RelayCommand(ExecuteJob, CanExecuteJob);
             PauseCommand = new RelayCommand(PauseJob, CanPauseOrStop);
             StopCommand = new RelayCommand(StopJob, CanPauseOrStop);
@@ -70,7 +78,7 @@ namespace EasySave.GUI.ViewModels
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
-                State = "En cours";
+                State = Lang.Translate("InProgress");
                 Progress = 0;
             });
         }
@@ -89,15 +97,16 @@ namespace EasySave.GUI.ViewModels
         {
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
-                State = "Termine";
+                State = Lang.Translate("Completed");
                 Progress = 100;
                 FilesRemaining = 0;
             });
         }
 
-        private bool CanExecuteJob(object? parameter) => State != "En cours";
+        // We compare against the translated "InProgress" string to know if the job is running
+        private bool CanExecuteJob(object? parameter) => State != Lang.Translate("InProgress");
 
-        private bool CanPauseOrStop(object? parameter) => State == "En cours";
+        private bool CanPauseOrStop(object? parameter) => State == Lang.Translate("InProgress");
 
         private void PauseJob(object? parameter)
         {
@@ -111,7 +120,7 @@ namespace EasySave.GUI.ViewModels
 
         private void ExecuteJob(object? parameter)
         {
-            if (State == "En cours") return;
+            if (State == Lang.Translate("InProgress")) return;
 
             System.Threading.Tasks.Task.Run(() =>
             {
@@ -123,7 +132,7 @@ namespace EasySave.GUI.ViewModels
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        State = $"Erreur: {ex.Message}";
+                        State = Lang.Translate("Error") + ": " + ex.Message;
                         Progress = 0;
                     });
                 }

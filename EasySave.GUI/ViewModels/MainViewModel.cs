@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
@@ -8,14 +9,39 @@ using EasySave.Models;
 
 namespace EasySave.GUI.ViewModels
 {
+    // Orchestrates the main window: job list, toolbar commands, and status bar.
+    // All user-facing strings go through LanguageManager so they adapt to the current language.
     public class MainViewModel : BaseViewModel
     {
         private readonly IBackupService _backupService;
+        private readonly ISettingsService? _settingsService;
         private BackupJobViewModel? _selectedBackupJob;
-        private string _statusText = "Pret";
+        private string _statusText;
         private double _globalProgress;
 
+        // Shortcut to avoid repeating LanguageManager.Instance everywhere
+        private LanguageManager Lang => LanguageManager.Instance;
+
         public ObservableCollection<BackupJobViewModel> BackupJobs { get; }
+
+        // List of available languages shown in the ComboBox
+        public ObservableCollection<string> AvailableLanguages { get; }
+
+        // Currently selected language in the ComboBox
+        private string _selectedLanguage;
+        public string SelectedLanguage
+        {
+            get => _selectedLanguage;
+            set
+            {
+                if (SetProperty(ref _selectedLanguage, value))
+                {
+                    // Map the display name back to its culture code
+                    string cultureCode = value == "English" ? "en" : "fr";
+                    Lang.CurrentLanguage = cultureCode;
+                }
+            }
+        }
 
         public BackupJobViewModel? SelectedBackupJob
         {
@@ -40,20 +66,23 @@ namespace EasySave.GUI.ViewModels
         }
 
         public ICommand CreateBackupCommand { get; }
-        public ICommand EditBackupCommand { get; } = null!;
+        public ICommand EditBackupCommand { get; }
         public ICommand ExecuteBackupCommand { get; }
         public ICommand DeleteBackupCommand { get; }
         public ICommand ExecuteAllCommand { get; }
         public ICommand RefreshCommand { get; }
         public ICommand OpenSettingsCommand { get; }
 
-        private readonly ISettingsService? _settingsService;
-
         public MainViewModel(IBackupService backupService, ISettingsService? settingsService = null)
         {
             _backupService = backupService ?? throw new ArgumentNullException(nameof(backupService));
             _settingsService = settingsService;
             BackupJobs = new ObservableCollection<BackupJobViewModel>();
+
+            // Set up the language options
+            AvailableLanguages = new ObservableCollection<string> { "Francais", "English" };
+            _selectedLanguage = Lang.CurrentLanguage == "en" ? "English" : "Francais";
+            _statusText = Lang.Translate("Ready");
 
             CreateBackupCommand = new RelayCommand(CreateBackupJob);
             EditBackupCommand = new RelayCommand(EditBackupJob, CanEditBackup);
@@ -70,16 +99,15 @@ namespace EasySave.GUI.ViewModels
         {
             try
             {
-                var jobs = _backupService.GetAllBackupJobs();
-                // Rebuild list so ViewModels always wrap the current job objects (important after Edit).
+                List<BackupJob> jobs = _backupService.GetAllBackupJobs();
                 BackupJobs.Clear();
-                foreach (var job in jobs)
+                foreach (BackupJob job in jobs)
                     BackupJobs.Add(new BackupJobViewModel(job));
-                StatusText = $"{jobs.Count} job(s) charge(s)";
+                StatusText = jobs.Count + " " + Lang.Translate("JobsLoaded");
             }
             catch (Exception ex)
             {
-                StatusText = $"Erreur chargement: {ex.Message}";
+                StatusText = Lang.Translate("ErrorLoading") + ": " + ex.Message;
             }
         }
 
@@ -87,7 +115,7 @@ namespace EasySave.GUI.ViewModels
         {
             try
             {
-                var dialog = new Views.CreateJobDialog();
+                Views.CreateJobDialog dialog = new Views.CreateJobDialog();
                 if (dialog.ShowDialog() == true)
                 {
                     _backupService.CreateBackupJob(
@@ -97,13 +125,16 @@ namespace EasySave.GUI.ViewModels
                         dialog.BackupType.ToLower());
 
                     LoadJobs();
-                    StatusText = $"Job '{dialog.JobName}' cree";
+                    StatusText = Lang.Translate("JobCreated") + ": " + dialog.JobName;
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Windows.MessageBox.Show(
+                    Lang.Translate("Error") + ": " + ex.Message,
+                    Lang.Translate("Error"),
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
             }
         }
 
@@ -112,11 +143,11 @@ namespace EasySave.GUI.ViewModels
         private void EditBackupJob(object? parameter)
         {
             if (SelectedBackupJob == null) return;
-            var index = BackupJobs.IndexOf(SelectedBackupJob);
+            int index = BackupJobs.IndexOf(SelectedBackupJob);
             if (index < 0) return;
             try
             {
-                var dialog = new Views.CreateJobDialog(
+                Views.CreateJobDialog dialog = new Views.CreateJobDialog(
                     SelectedBackupJob.Name,
                     SelectedBackupJob.SourcePath,
                     SelectedBackupJob.TargetPath,
@@ -133,24 +164,26 @@ namespace EasySave.GUI.ViewModels
                         dialog.TargetPath,
                         dialog.BackupType.ToLower());
                     LoadJobs();
-                    StatusText = $"Job '{dialog.JobName}' modifie";
+                    StatusText = Lang.Translate("JobModified") + ": " + dialog.JobName;
                 }
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                System.Windows.MessageBox.Show(
+                    Lang.Translate("Error") + ": " + ex.Message,
+                    Lang.Translate("Error"),
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Error);
             }
         }
 
         private void ExecuteBackup(object? parameter)
         {
             if (SelectedBackupJob == null) return;
-
-            var index = BackupJobs.IndexOf(SelectedBackupJob);
+            int index = BackupJobs.IndexOf(SelectedBackupJob);
             if (index < 0) return;
 
-            StatusText = $"Execution : {SelectedBackupJob.Name}";
+            StatusText = Lang.Translate("Running") + ": " + SelectedBackupJob.Name;
             System.Threading.Tasks.Task.Run(() =>
             {
                 try
@@ -161,9 +194,12 @@ namespace EasySave.GUI.ViewModels
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                        StatusText = "Erreur execution";
+                        System.Windows.MessageBox.Show(
+                            Lang.Translate("Error") + ": " + ex.Message,
+                            Lang.Translate("Error"),
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Error);
+                        StatusText = Lang.Translate("ErrorExecution");
                     });
                 }
             });
@@ -175,27 +211,32 @@ namespace EasySave.GUI.ViewModels
         {
             if (SelectedBackupJob == null) return;
 
-            var jobName = SelectedBackupJob.Name;
-            var result = System.Windows.MessageBox.Show(
-                $"Supprimer '{jobName}' ?", "Confirmation",
-                System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            string jobName = SelectedBackupJob.Name;
+            System.Windows.MessageBoxResult result = System.Windows.MessageBox.Show(
+                Lang.Translate("ConfirmDelete") + " (" + jobName + ")",
+                Lang.Translate("Confirmation"),
+                System.Windows.MessageBoxButton.YesNo,
+                System.Windows.MessageBoxImage.Question);
 
             if (result == System.Windows.MessageBoxResult.Yes)
             {
                 try
                 {
-                    var index = BackupJobs.IndexOf(SelectedBackupJob);
+                    int index = BackupJobs.IndexOf(SelectedBackupJob);
                     if (index >= 0)
                     {
                         _backupService.DeleteBackupJob(index);
                         LoadJobs();
-                        StatusText = $"Job supprime : {jobName}";
+                        StatusText = Lang.Translate("JobDeleted") + ": " + jobName;
                     }
                 }
                 catch (Exception ex)
                 {
-                    System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                        System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    System.Windows.MessageBox.Show(
+                        Lang.Translate("Error") + ": " + ex.Message,
+                        Lang.Translate("Error"),
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Error);
                 }
             }
         }
@@ -204,8 +245,8 @@ namespace EasySave.GUI.ViewModels
 
         private void ExecuteAll(object? parameter)
         {
-            var indices = Enumerable.Range(0, BackupJobs.Count).ToList();
-            StatusText = $"Execution de {indices.Count} job(s)...";
+            List<int> indices = Enumerable.Range(0, BackupJobs.Count).ToList();
+            StatusText = Lang.Translate("Running") + " " + indices.Count + " job(s)...";
 
             System.Threading.Tasks.Task.Run(() =>
             {
@@ -214,15 +255,18 @@ namespace EasySave.GUI.ViewModels
                     _backupService.ExecuteMultipleBackupJobs(indices);
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        StatusText = $"Execution de {indices.Count} job(s) terminee";
+                        StatusText = Lang.Translate("AllDone");
                     });
                 }
                 catch (Exception ex)
                 {
                     System.Windows.Application.Current.Dispatcher.Invoke(() =>
                     {
-                        System.Windows.MessageBox.Show($"Erreur : {ex.Message}", "Erreur",
-                            System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                        System.Windows.MessageBox.Show(
+                            Lang.Translate("Error") + ": " + ex.Message,
+                            Lang.Translate("Error"),
+                            System.Windows.MessageBoxButton.OK,
+                            System.Windows.MessageBoxImage.Error);
                     });
                 }
             });
@@ -236,7 +280,7 @@ namespace EasySave.GUI.ViewModels
         private void OpenSettings(object? parameter)
         {
             if (_settingsService == null) return;
-            var window = new Views.SettingsWindow(_settingsService)
+            Views.SettingsWindow window = new Views.SettingsWindow(_settingsService)
             {
                 Owner = System.Windows.Application.Current.MainWindow
             };
