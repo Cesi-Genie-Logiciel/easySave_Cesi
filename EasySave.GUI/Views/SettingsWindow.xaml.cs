@@ -4,22 +4,32 @@ using EasySave.Interfaces;
 
 namespace EasySave.GUI.Views
 {
+    // Settings window code-behind. Creates its own ViewModel and
+    // wires up the close/apply events coming from the ViewModel.
     public partial class SettingsWindow : Window
     {
         public SettingsWindow(ISettingsService settingsService)
         {
             InitializeComponent();
-            var vm = new SettingsViewModel(settingsService);
-            vm.CloseRequested += (_, saved) =>
+            SettingsViewModel viewModel = new SettingsViewModel(settingsService);
+            LanguageManager lang = LanguageManager.Instance;
+
+            viewModel.CloseRequested += (sender, saved) =>
             {
                 DialogResult = saved;
                 Close();
             };
-            vm.ApplyRequested += (_, _) =>
+
+            viewModel.ApplyRequested += (sender, args) =>
             {
-                System.Windows.MessageBox.Show("Paramètres appliqués.", "Paramètres", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(
+                    lang.Translate("SettingsSaved"),
+                    lang.Translate("Settings"),
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             };
-            DataContext = vm;
+
+            DataContext = viewModel;
         }
     }
 }

@@ -58,9 +58,10 @@ namespace EasySave.GUI.ViewModels
             _state = Lang.Translate("Stopped");
 
             PlayCommand = new RelayCommand(ExecuteJob, CanExecuteJob);
-            PauseCommand = new RelayCommand(PauseJob, CanPauseOrStop);
-            StopCommand = new RelayCommand(StopJob, CanPauseOrStop);
+            PauseCommand = new RelayCommand(PauseJob, CanPause);
+            StopCommand = new RelayCommand(StopJob, CanStop);
 
+            // Listen to the model events so we can update the UI in real time
             _model.BackupStarted += OnBackupStarted;
             _model.FileTransferred += OnFileTransferred;
             _model.BackupCompleted += OnBackupCompleted;
@@ -103,25 +104,45 @@ namespace EasySave.GUI.ViewModels
             });
         }
 
-        // We compare against the translated "InProgress" string to know if the job is running
-        private bool CanExecuteJob(object? parameter) => State != Lang.Translate("InProgress");
+        // Play is available whenever the job is not actively running.
+        // This covers Stopped, Completed, Paused and Error states.
+        private bool CanExecuteJob(object? parameter) =>
+            State != Lang.Translate("InProgress");
 
-        private bool CanPauseOrStop(object? parameter) => State == Lang.Translate("InProgress");
+        // Pause is only available when the job is actively running
+        private bool CanPause(object? parameter) => State == Lang.Translate("InProgress");
+
+        // Stop is available when the job is running or paused
+        private bool CanStop(object? parameter) =>
+            State == Lang.Translate("InProgress") || State == Lang.Translate("Paused");
 
         private void PauseJob(object? parameter)
         {
             _model.Pause();
+            State = Lang.Translate("Paused");
         }
 
         private void StopJob(object? parameter)
         {
             _model.Stop();
+            State = Lang.Translate("Stopped");
         }
 
         private void ExecuteJob(object? parameter)
         {
             if (State == Lang.Translate("InProgress")) return;
 
+            // If the job was paused, resume it instead of starting over.
+            // This calls Resume() on the model which reopens the ManualResetEventSlim
+            // gate, letting the blocked backup thread continue where it left off.
+            if (State == Lang.Translate("Paused"))
+            {
+                _model.Resume();
+                State = Lang.Translate("InProgress");
+                return;
+            }
+
+            // Otherwise start a fresh execution in a background thread
             System.Threading.Tasks.Task.Run(() =>
             {
                 try

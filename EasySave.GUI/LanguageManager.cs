@@ -73,6 +73,7 @@ namespace EasySave.GUI
                     // Job states
                     ["Stopped"] = "Arrete",
                     ["InProgress"] = "En cours",
+                    ["Paused"] = "En pause",
                     ["Completed"] = "Termine",
 
                     // Create/Edit dialog
@@ -164,6 +165,7 @@ namespace EasySave.GUI
                     // Job states
                     ["Stopped"] = "Stopped",
                     ["InProgress"] = "Running",
+                    ["Paused"] = "Paused",
                     ["Completed"] = "Completed",
 
                     // Create/Edit dialog

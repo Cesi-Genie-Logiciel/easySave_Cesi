@@ -8,10 +8,6 @@ using EasySave.Services;
 
 namespace EasySave.GUI
 {
-    /// <summary>
-    /// App conforme au diagramme v2.0 (lignes 12-14)
-    /// Point d'entrée de l'application WPF avec Dependency Injection
-    /// </summary>
     public partial class App : System.Windows.Application
     {
         public IServiceProvider ServiceProvider { get; private set; } = null!;
@@ -20,22 +16,34 @@ namespace EasySave.GUI
         {
             base.OnStartup(e);
 
-            // Configuration du container DI
-            var services = new ServiceCollection();
+            ServiceCollection services = new ServiceCollection();
 
-            // Services P2 (backend)
-            services.AddSingleton<ISettingsService, SettingsService>();
+            // Load settings to check if a business software is configured
+            SettingsService settingsService = new SettingsService();
+            services.AddSingleton<ISettingsService>(settingsService);
             services.AddSingleton<IJobStorageService, JobStorageService>();
-            services.AddSingleton<IBackupService, BackupService>();
 
-            // ViewModels
+            // Build the BackupService manually so we can pass the detector
+            string businessSoftwareName = settingsService.Load().BusinessSoftwareName;
+            BusinessSoftwareDetector? detector = null;
+
+            if (!string.IsNullOrWhiteSpace(businessSoftwareName))
+            {
+                detector = new BusinessSoftwareDetector(businessSoftwareName, 500);
+            }
+
+            // We build BackupService ourselves instead of letting DI do it,
+            // because DI does not inject the optional detector properly
+            IJobStorageService storageService = new JobStorageService();
+            services.AddSingleton<IJobStorageService>(storageService);
+            BackupService backupService = new BackupService(storageService, detector);
+            services.AddSingleton<IBackupService>(backupService);
+
             services.AddTransient<MainViewModel>();
 
-            // Build le service provider
             ServiceProvider = services.BuildServiceProvider();
 
-            // Créer et afficher la fenêtre principale
-            var mainWindow = new MainWindow
+            MainWindow mainWindow = new MainWindow
             {
                 DataContext = ServiceProvider.GetRequiredService<MainViewModel>()
             };
@@ -45,7 +53,6 @@ namespace EasySave.GUI
 
         protected override void OnExit(ExitEventArgs e)
         {
-            // Cleanup du service provider
             if (ServiceProvider is IDisposable disposable)
             {
                 disposable.Dispose();

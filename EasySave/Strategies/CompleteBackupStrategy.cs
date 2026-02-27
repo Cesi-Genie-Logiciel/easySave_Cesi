@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using EasySave.Interfaces;
 using EasySave.Models;
 using EasySave.Services;
@@ -18,6 +19,9 @@ namespace EasySave.Strategies
 
         private Action<BackupEventArgs>? _onFileTransferred;
         private string _jobName = string.Empty;
+
+        // Reference to the parent job so we can read its cancellation token and pause gate
+        private BackupJob? _parentJob;
 
         public CompleteBackupStrategy(ICryptoService? cryptoService = null, string? encryptionKey = null,
                                       ILogger? logger = null, List<string>? extensionsToEncrypt = null)
@@ -36,6 +40,12 @@ namespace EasySave.Strategies
             _jobName = jobName;
         }
 
+        // Called by BackupJob.Execute() so the strategy knows which job it belongs to
+        public void SetParentJob(BackupJob job)
+        {
+            _parentJob = job;
+        }
+
         public void ExecuteBackup(string sourcePath, string targetPath)
         {
             Console.WriteLine("  Mode : Sauvegarde complete");
@@ -43,12 +53,21 @@ namespace EasySave.Strategies
             if (!Directory.Exists(targetPath))
                 Directory.CreateDirectory(targetPath);
 
-            var files = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
+            string[] files = Directory.GetFiles(sourcePath, "*.*", SearchOption.AllDirectories);
             int total = files.Length;
             int done = 0;
 
-            foreach (var file in files)
+            foreach (string file in files)
             {
+                // Before copying each file, check if the user asked to stop
+                if (_parentJob != null)
+                {
+                    _parentJob.CancellationToken.ThrowIfCancellationRequested();
+
+                    // If the job is paused, this call blocks until Resume() opens the gate
+                    _parentJob.PauseEvent.Wait(_parentJob.CancellationToken);
+                }
+
                 string relative = Path.GetRelativePath(sourcePath, file);
                 string dest = Path.Combine(targetPath, relative);
 
