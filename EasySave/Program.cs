@@ -81,7 +81,16 @@ namespace EasySave
             try
             {
                 var settings = settingsService.GetCurrent();
+
+                // Primary source: persisted settings (UI/menu)
                 var businessName = settings?.BusinessSoftwareName;
+
+                // Fallback: environment variable for quick demos / CI
+                // (We keep this optional and non-breaking for v3.)
+                if (string.IsNullOrWhiteSpace(businessName))
+                {
+                    businessName = Environment.GetEnvironmentVariable("EASY_SAVE_BUSINESS_PROCESS");
+                }
 
                 if (string.IsNullOrWhiteSpace(businessName))
                 {
